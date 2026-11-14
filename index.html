@@ -1361,8 +1361,127 @@
       document.getElementById("external-exam-runner").classList.remove("hidden");
       document.getElementById("ext-active-student").innerText="الطالب: "+studentInfo.name;
       const container=document.getElementById("frame-container");container.innerHTML="";
-      if(currentExam.type==="external"){const frame=document.createElement("iframe");frame.className="embedded-frame";frame.src=currentExam.external_url;frame.referrerPolicy="no-referrer";container.appendChild(frame);}
-      else{const frame=document.createElement("iframe");frame.className="embedded-frame";frame.setAttribute("sandbox","allow-forms allow-scripts");frame.srcdoc=currentExam.html_content||"";container.appendChild(frame);}
+      if(currentExam.type==="external"){
+        const frame=document.createElement("iframe");
+        frame.className="embedded-frame";
+        frame.src=currentExam.external_url;
+        frame.referrerPolicy="no-referrer";
+        frame.title="الاختبار الخارجي";
+        container.appendChild(frame);
+      } else {
+        const frame=document.createElement("iframe");
+        frame.className="embedded-frame";
+        frame.title="اختبار HTML مدمج";
+        // Keep the opaque-origin sandbox. Do not add allow-same-origin.
+        // allow-modals is needed by common HTML exams using alert()/confirm().
+        frame.setAttribute("sandbox","allow-forms allow-scripts allow-modals");
+        let html=String(currentExam.html_content||"");
+        if(/<head\\b[^>]*>/i.test(html)){
+          html=html.replace(/<head\\b[^>]*>/i,match=>match+"<script>
+(function () {
+  "use strict";
+  // Opaque-origin srcdoc documents cannot use native localStorage.
+  // Provide a small, isolated Web Storage-compatible shim without granting same-origin access.
+  var prefix = "__EMARA_HTML_EXAM_STORAGE__:";
+  function readStore() {
+    try {
+      var raw = window.name || "";
+      if (raw.indexOf(prefix) !== 0) return {};
+      var parsed = JSON.parse(raw.slice(prefix.length));
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch (_) { return {}; }
+  }
+  function writeStore(store) {
+    try { window.name = prefix + JSON.stringify(store); } catch (_) {}
+  }
+  var storage = {
+    getItem: function (key) {
+      var store = readStore();
+      key = String(key);
+      return Object.prototype.hasOwnProperty.call(store, key) ? String(store[key]) : null;
+    },
+    setItem: function (key, value) {
+      var store = readStore();
+      store[String(key)] = String(value);
+      writeStore(store);
+    },
+    removeItem: function (key) {
+      var store = readStore();
+      delete store[String(key)];
+      writeStore(store);
+    },
+    clear: function () { writeStore({}); },
+    key: function (index) {
+      var keys = Object.keys(readStore());
+      return Number.isInteger(Number(index)) && Number(index) >= 0 ? (keys[Number(index)] || null) : null;
+    }
+  };
+  Object.defineProperty(storage, "length", {
+    enumerable: true,
+    get: function () { return Object.keys(readStore()).length; }
+  });
+  try {
+    Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
+  } catch (_) {
+    try { window.localStorage = storage; } catch (__) {}
+  }
+})();
+</script>");
+        }else{
+          html="<!doctype html><html><head><script>
+(function () {
+  "use strict";
+  // Opaque-origin srcdoc documents cannot use native localStorage.
+  // Provide a small, isolated Web Storage-compatible shim without granting same-origin access.
+  var prefix = "__EMARA_HTML_EXAM_STORAGE__:";
+  function readStore() {
+    try {
+      var raw = window.name || "";
+      if (raw.indexOf(prefix) !== 0) return {};
+      var parsed = JSON.parse(raw.slice(prefix.length));
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch (_) { return {}; }
+  }
+  function writeStore(store) {
+    try { window.name = prefix + JSON.stringify(store); } catch (_) {}
+  }
+  var storage = {
+    getItem: function (key) {
+      var store = readStore();
+      key = String(key);
+      return Object.prototype.hasOwnProperty.call(store, key) ? String(store[key]) : null;
+    },
+    setItem: function (key, value) {
+      var store = readStore();
+      store[String(key)] = String(value);
+      writeStore(store);
+    },
+    removeItem: function (key) {
+      var store = readStore();
+      delete store[String(key)];
+      writeStore(store);
+    },
+    clear: function () { writeStore({}); },
+    key: function (index) {
+      var keys = Object.keys(readStore());
+      return Number.isInteger(Number(index)) && Number(index) >= 0 ? (keys[Number(index)] || null) : null;
+    }
+  };
+  Object.defineProperty(storage, "length", {
+    enumerable: true,
+    get: function () { return Object.keys(readStore()).length; }
+  });
+  try {
+    Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
+  } catch (_) {
+    try { window.localStorage = storage; } catch (__) {}
+  }
+})();
+</script></head><body>"+html+"</body></html>";
+        }
+        frame.srcdoc=html;
+        container.appendChild(frame);
+      }
     }
     async function finishExternalExam() {
       if(!confirm("هل أنت متأكد من إنهاء الاختبار وتسجيل التسليم؟"))return;
