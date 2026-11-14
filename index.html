@@ -968,28 +968,11 @@
     }
 
     async function trackStudentActivity(action, details) {
-      const record = {
-        studentName: studentInfo.name || "زائر غير مسجل",
-        className: studentInfo.className || "-",
-        action: action,
-        details: details,
-        timestamp: new Date().toLocaleString("ar-EG")
-      };
-
-      const localActs = JSON.parse(localStorage.getItem("emara_activities") || "[]");
-      localActs.push(record);
-      localStorage.setItem("emara_activities", JSON.stringify(localActs));
-
-      if (!window.db) return;
-
       try {
-        await window.firestoreFuncs.addDoc(
-          window.firestoreFuncs.collection(window.db, "student_activities"),
-          record
-        );
-      } catch (err) {
-        console.log("خطأ في تسجيل النشاط:", err);
-      }
+        const deviceId=localStorage.getItem("emara_device_id")||crypto.randomUUID();
+        localStorage.setItem("emara_device_id",deviceId);
+        await window.supabaseClient.functions.invoke("exam-api",{body:{action:"activity",device_id:deviceId,student_name:studentInfo.name||"زائر غير مسجل",class_name:studentInfo.className||"-",activity,details}});
+      } catch(err){console.warn("تعذر تسجيل النشاط السحابي:",err);}
     }
 
     async function refreshDataFromCloud() {
