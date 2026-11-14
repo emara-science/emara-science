@@ -811,7 +811,7 @@
             </p>
             <div class="form-group">
               <label>كلمة المرور الجديدة:</label>
-              <input type="text" id="new-teacher-pass" placeholder="12 حرفًا على الأقل، ويفضل مزيجًا من أنواع مختلفة..." />
+              <input type="text" id="new-teacher-pass" placeholder="6 أحرف على الأقل، ويُفضّل اختيار كلمة مرور غير متوقعة..." />
             </div>
             <button class="btn btn-yellow" onclick="updateTeacherPassword()">💾 حفظ كلمة المرور الجديدة</button>
           </div>
@@ -1170,7 +1170,7 @@
 
     async function updateTeacherPassword() {
       const newPass=document.getElementById("new-teacher-pass").value;
-      if(newPass.length<12){alert("استخدم كلمة مرور قوية لا تقل عن 12 حرفًا.");return;}
+      if(newPass.length<6){alert("يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.");return;}
       const {data,error}=await window.supabaseClient.auth.updateUser({password:newPass});
       if(error||!data?.user){alert(error?.message||"تعذر تحديث كلمة المرور.");return;}
       document.getElementById("new-teacher-pass").value="";
