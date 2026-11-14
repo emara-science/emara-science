@@ -1502,7 +1502,7 @@
         const rows = (data?.results || []).map(r => {
           const exam=(data.exams || []).find(e => e.id === r.exam_id);
           return {id:r.id,studentName:r.student_name,className:r.class_name,examTitle:exam?.title||"اختبار",
-            score:r.has_html_submission?"تم التسليم — يحتاج مراجعة":(r.score==null?(r.status||"—"):`${r.score} / ${r.max_score}`),
+            score:r.has_html_submission?(r.status==="expired"?"تم استلامه بعد انتهاء الوقت — يحتاج مراجعة":"تم التسليم — يحتاج مراجعة"):(r.score==null?(r.status||"—"):`${r.score} / ${r.max_score}`),
             hasHtmlSubmission:!!r.has_html_submission,timestamp:r.submitted_at||r.started_at||""};
         });
         window.cachedResults = rows;
