@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>منصة مستر محمد عمارة | العلوم والكيمياء</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #18181b;
+      --bg-card: #27272a;
+      --bg-input: #3f3f46;
+      --primary-red: #dc2626;
+      --primary-red-hover: #b91c1c;
+      --accent-yellow: #facc15;
+      --text-main: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --border-color: #3f3f46;
+      --success: #16a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* الهيدر العلوي */
+    header {
+      background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+      border-bottom: 4px solid var(--primary-red);
+      padding: 1.2rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    header h1 {
+      color: var(--accent-yellow);
+      font-size: 1.8rem;
+      font-weight: 900;
+      margin-bottom: 0.2rem;
+    }
+
+    header p {
+      color: var(--text-main);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    header .badge {
+      display: inline-block;
+      background-color: var(--primary-red);
+      color: #fff;
+      padding: 0.2rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      font-weight: 700;
+    }
+
+    /* شريط التنقل */
+    nav {
+      background-color: var(--bg-card);
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-btn {
+      background-color: transparent;
+      color: var(--text-main);
+      border: 2px solid var(--border-color);
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .nav-btn:hover, .nav-btn.active {
+      background-color: var(--primary-red);
+      border-color: var(--primary-red);
+      color: #fff;
+    }
+
+    .nav-btn.teacher-btn {
+      border-color: var(--accent-yellow);
+      color: var(--accent-yellow);
+    }
+
+    .nav-btn.teacher-btn:hover, .nav-btn.teacher-btn.active {
+      background-color: var(--accent-yellow);
+      color: #18181b;
+    }
+
+    /* الحاوية الرئيسية */
+    main {
+      max-width: 960px;
+      width: 100%;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+      flex: 1;
+    }
+
+    .section {
+      display: none;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-title {
+      color: var(--accent-yellow);
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--primary-red);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* البطاقات */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-right: 5px solid var(--accent-yellow);
+      border-radius: 10px;
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .card.exam-card {
+      border-right-color: var(--primary-red);
+    }
+
+    .card h3 {
+      color: #fff;
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .card p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+
+    .meta-tags {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .tag {
+      background-color: var(--bg-input);
+      color: var(--accent-yellow);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .btn {
+      display: inline-block;
+      text-align: center;
+      background-color: var(--primary-red);
+      color: #fff;
+      border: none;
+      padding: 0.65rem 1.2rem;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+      width: 100%;
+    }
+
+    .btn:hover {
+      background-color: var(--primary-red-hover);
+    }
+
+    .btn-yellow {
+      background-color: var(--accent-yellow);
+      color: #18181b;
+    }
+
+    .btn-yellow:hover {
+      background-color: #eab308;
+    }
+
+    .btn-secondary {
+      background-color: #4b5563;
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background-color: #374151;
+    }
+
+    /* واجهة دخول الاختبار */
+    .exam-box {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: 700;
+      color: var(--accent-yellow);
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-input);
+      color: #fff;
+      font-size: 1rem;
+    }
+
+    .error-msg {
+      color: #f87171;
+      font-size: 0.9rem;
+      margin-top: 0.4rem;
+      font-weight: 700;
+    }
+
+    /* شريط المؤقت والأسئلة */
+    .exam-header-bar {
+      background-color: #111827;
+      border: 2px solid var(--primary-red);
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+      position: sticky;
+      top: 62px;
+      z-index: 90;
+    }
+
+    .timer {
+      background-color: var(--primary-red);
+      color: #fff;
+      padding: 0.3rem 0.9rem;
+      border-radius: 8px;
+      font-weight: 900;
+      font-size: 1.1rem;
+      direction: ltr;
+    }
+
+    .question-item {
+      background-color: #1f1f23;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+    }
+
+    .question-text {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-bottom: 0.8rem;
+      color: #fff;
+    }
+
+    .option-label {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 0.65rem 0.9rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .option-label:hover {
+      border-color: var(--accent-yellow);
+    }
+
+    .option-label input[type="radio"] {
+      accent-color: var(--primary-red);
+      width: 18px;
+      height: 18px;
+    }
+
+    /* إطار التضمين للاختبارات الخارجية */
+    .embedded-frame-container {
+      width: 100%;
+      height: 75vh;
+      border-radius: 12px;
+      border: 2px solid var(--border-color);
+      background-color: #fff;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+
+    .embedded-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* نتيجة الطالب */
+    .result-card {
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    .score-circle {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      border: 6px solid var(--accent-yellow);
+      background-color: #111827;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      margin: 1rem auto;
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--accent-yellow);
+    }
+
+    /* جدول لوحة تحكم المعلم */
+    .table-wrapper {
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: right;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.9rem;
+    }
+
+    th {
+      background-color: #111827;
+      color: var(--accent-yellow);
+    }
+
+    footer {
+      background-color: #111827;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 1rem;
+      border-top: 2px solid var(--border-color);
+      font-size: 0.85rem;
+      margin-top: 2rem;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>منصة مستر محمد عمارة</h1>
+    <p>معلم العلوم والكيمياء والعلوم المتكاملة</p>
+    <span class="badge">مدرسة الشوافين الثانوية المشتركة</span>
+  </header>
+
+  <nav>
+    <button class="nav-btn active" onclick="switchTab('exams-tab', this)">الاختبارات الإلكترونية</button>
+    <button class="nav-btn" onclick="switchTab('resources-tab', this)">المذكرات والتقييمات (PDF)</button>
+    <button class="nav-btn teacher-btn" onclick="switchTab('teacher-tab', this)">لوحة تحكم المعلم</button>
+  </nav>
+
+  <main>
+    <!-- قسم الاختبارات الإلكترونية -->
+    <section id="exams-tab" class="section active">
+      <div class="section-title">
+        <span>الاختبارات المتاحة حالياً</span>
+      </div>
+
+      <!-- قائمة الاختبارات -->
+      <div id="exams-list" class="grid"></div>
+
+      <!-- شاشة تسجيل بيانات الطالب قبل البدء -->
+      <div id="exam-intro" class="exam-box hidden">
+        <h2 id="intro-exam-title" style="color: var(--accent-yellow); margin-bottom: 0.5rem;"></h2>
+        <p id="intro-exam-desc" style="color: var(--text-muted); margin-bottom: 1rem;"></p>
+        
+        <div class="form-group">
+          <label for="student-name">اسم الطالب رباعياً (إجباري):</label>
+          <input type="text" id="student-name" placeholder="مثال: أحمد محمد محمود علي" />
+          <div id="name-error" class="error-msg hidden">⚠️ يرجى كتابة الاسم رباعياً (4 أسماء على الأقل) للدخول إلى الاختبار.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="student-class">الصف / الشعبة:</label>
+          <select id="student-class">
+            <option value="الصف الأول الثانوي - علوم متكاملة">الصف الأول الثانوي - علوم متكاملة</option>
+            <option value="الصف الثاني الثانوي - كيمياء">الصف الثاني الثانوي - كيمياء</option>
+            <option value="المرحلة الإعدادية - علوم">المرحلة الإعدادية - علوم</option>
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; margin-top: 1rem;">
+          <button class="btn" onclick="startSelectedExam()">بدء الاختبار الآن</button>
+          <button class="btn btn-yellow" style="width: 40%;" onclick="cancelExamIntro()">رجوع</button>
+        </div>
+      </div>
+
+      <!-- شاشة الأسئلة النشطة (طريقة تفاعلية) -->
+      <div id="exam-runner" class="hidden">
+        <div class="exam-header-bar">
+          <div>
+            <strong id="active-student-display" style="color: var(--accent-yellow); font-size: 0.95rem;"></strong>
+            <div id="q-count-indicator" style="font-size: 0.8rem; color: var(--text-muted);">عدد الأسئلة: <span id="q-count-display"></span></div>
+          </div>
+          <div class="timer" id="timer-display">15:00</div>
+        </div>
+
+        <div id="questions-container"></div>
+
+        <button class="btn" id="btn-submit-exam" style="font-size: 1.1rem; padding: 0.9rem;" onclick="submitExam(false)">تسليم الإجابات وعرض النتيجة</button>
+      </div>
+
+      <!-- شاشة تشغيل الاختبار الخارجي (رابط/ملف HTML) -->
+      <div id="external-exam-runner" class="hidden">
+        <div class="exam-header-bar">
+          <div>
+            <strong id="ext-active-student" style="color: var(--accent-yellow); font-size: 0.95rem;"></strong>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">برجاء إتمام الاختبار بالكامل في النافذة بالأسفل</div>
+          </div>
+          <button class="btn btn-yellow" style="width: auto; padding: 0.4rem 1rem;" onclick="finishExternalExam()">أنهيت الاختبار</button>
+        </div>
+        <div class="embedded-frame-container" id="frame-container"></div>
+      </div>
+
+      <!-- شاشة النتيجة النهائية -->
+      <div id="exam-result" class="exam-box result-card hidden">
+        <h2 id="result-title-main" style="color: var(--accent-yellow);">تم تسليم الاختبار بنجاح!</h2>
+        <p id="result-student-name" style="font-weight: 700; margin-top: 0.3rem;"></p>
+        <div class="score-circle" id="score-circle-container">
+          <span id="score-value">0 / 0</span>
+          <span style="font-size: 0.8rem; color: #fff;">الدرجة</span>
+        </div>
+        <p id="submission-status" style="color: #4ade80; font-weight: 700; margin-bottom: 1rem;"></p>
+        <div id="review-container" style="text-align: right; margin-top: 1.5rem;"></div>
+        <button class="btn btn-yellow" style="margin-top: 1rem;" onclick="resetToExamList()">العودة لقائمة الاختبارات</button>
+      </div>
+    </section>
+
+    <!-- قسم المذكرات والتقييمات -->
+    <section id="resources-tab" class="section">
+      <div class="section-title">
+        <span>المذكرات، الملخصات، والتقييمات الأسبوعية</span>
+      </div>
+      <div id="resources-list" class="grid"></div>
+    </section>
+
+    <!-- لوحة تحكم المعلم -->
+    <section id="teacher-tab" class="section">
+      <div class="section-title">
+        <span>لوحة تحكم مستر محمد عمارة</span>
+      </div>
+
+      <!-- شاشة تسجيل دخول المعلم -->
+      <div id="teacher-login-box" class="exam-box" style="max-width: 450px; margin: 0 auto;">
+        <div class="form-group">
+          <label>كلمة مرور المعلم:</label>
+          <input type="password" id="teacher-pass" placeholder="أدخل كلمة المرور..." />
+          <div id="teacher-pass-err" class="error-msg hidden">كلمة المرور غير صحيحة!</div>
+        </div>
+        <button class="btn btn-yellow" onclick="loginTeacher()">دخول</button>
+      </div>
+
+      <!-- لوحة التحكم الكاملة بعد الدخول -->
+      <div id="teacher-dashboard" class="hidden">
+        
+        <!-- التبويبات الداخلية للوحة التحكم -->
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem;">
+          <button class="nav-btn active" id="btn-show-results" onclick="switchAdminSubTab('results')">🏆 عرض الدرجات</button>
+          <button class="nav-btn" id="btn-add-exam" onclick="switchAdminSubTab('add-exam')">📝 إضافة اختبار الكتروني</button>
+          <button class="nav-btn" id="btn-add-resource" onclick="switchAdminSubTab('add-resource')">📚 إضافة مذكرة/PDF</button>
+        </div>
+
+        <!-- الجزء الخاص بالدرجات -->
+        <div id="admin-results-section">
+          <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <button class="btn btn-yellow" style="width: auto;" onclick="exportResultsCSV()">📥 تصدير الدرجات إلى Excel</button>
+            <button class="btn btn-secondary" style="width: auto;" onclick="unlockLocalAttempt()">🔓 فتح إعادة محاولة على هذا الجهاز</button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>اسم الطالب</th>
+                  <th>الصف</th>
+                  <th>الاختبار</th>
+                  <th>الدرجة</th>
+                  <th>التوقيت</th>
+                </tr>
+              </thead>
+              <tbody id="results-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- الجزء الخاص بإضافة اختبار إلكتروني جديد من الهاتف -->
+        <div id="admin-add-exam-section" class="hidden">
+          <div class="exam-box">
+            <h3 style="color: var(--accent-yellow); margin-bottom: 1rem;">إنشاء اختبار جديد</h3>
+            
+            <div class="form-group">
+              <label>عنوان الاختبار:</label>
+              <input type="text" id="new-exam-title" placeholder="مثال: اختبار الأسبوع العاشر" />
+            </div>
+
+            <div class="form-group">
+              <label>الصف المستهدف:</label>
+              <select id="new-exam-grade">
+                <option value="الصف الأول الثانوي - علوم متكاملة">الصف الأول الثانوي - علوم متكاملة</option>
+                <option value="الصف الثاني الثانوي - كيمياء">الصف الثاني الثانوي - كيمياء</option>
+                <option value="المرحلة الإعدادية - علوم">المرحلة الإعدادية - علوم</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>وصف قصير للاختبار:</label>
+              <textarea id="new-exam-desc" rows="2" placeholder="مثال: اختبار شامل، محاولة واحدة فقط"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>كيف ترغب في بناء الاختبار؟</label>
+              <select id="new-exam-type" onchange="toggleExamBuildMethod(this.value)">
+                <option value="interactive">أسئلة المنصة التفاعلية (إنشاء يدوي)</option>
+                <option value="file">رفع ملف اختبار جاهز (.html) من هاتفك مباشرة 📲</option>
+                <option value="embed">لصق كود الاختبار البرمجي بالكامل (HTML Code) 📋</option>
+                <option value="external">رابط خارجي (مثل Google Forms)</option>
+              </select>
+            </div>
+
+            <!-- وقت الاختبار (فقط للاختبارات التفاعلية) -->
+            <div class="form-group" id="group-duration">
+              <label>وقت الاختبار (بالدقائق):</label>
+              <input type="number" id="new-exam-duration" value="15" />
+            </div>
+
+            <!-- حالة 1: تفاعلي (أسئلة واجوبة) -->
+            <div id="build-method-interactive" style="border-top: 1px solid var(--border-color); margin: 1.5rem 0; padding-top: 1rem;">
+              <h4 style="color: #fff; margin-bottom: 0.8rem;">الأسئلة</h4>
+              <div id="new-questions-container"></div>
+              <button class="btn btn-secondary" type="button" onclick="addNewQuestionInput()">➕ أضف سؤالاً جديداً</button>
+            </div>
+
+            <!-- حالة 2: رفع ملف HTML مباشرة من الهاتف -->
+            <div id="build-method-file" class="hidden" style="border-top: 1px solid var(--border-color); margin: 1.5rem 0; padding-top: 1rem;">
+              <div class="form-group">
+                <label>اختر ملف الاختبار من هاتفك (.html):</label>
+                <input type="file" id="new-exam-file-input" accept=".html" onchange="handleExamFileUpload(this)" />
+                <p style="font-size: 0.8rem; color: var(--accent-yellow); margin-top: 0.4rem;">* اضغط لتحديد أي ملف HTML لاختبارك، وسيتم تضمينه تلقائياً دون الحاجة لـ GitHub.</p>
+                <div id="file-upload-status" style="font-size: 0.9rem; margin-top: 0.3rem; color: #4ade80;" class="hidden">✔️ تم تجهيز الملف بنجاح!</div>
+              </div>
+            </div>
+
+            <!-- حالة 3: لصق كود HTML بالكامل -->
+            <div id="build-method-embed" class="hidden" style="border-top: 1px solid var(--border-color); margin: 1.5rem 0; padding-top: 1rem;">
+              <div class="form-group">
+                <label>ألصق كود الاختبار البرمجي هنا (HTML / CSS / JS):</label>
+                <textarea id="new-exam-embed" rows="10" placeholder="ألصق كود الـ HTML الكامل لاختبارك هنا..."></textarea>
+              </div>
+            </div>
+
+            <!-- حالة 4: رابط خارجي (Google Forms) -->
+            <div id="build-method-external" class="hidden" style="border-top: 1px solid var(--border-color); margin: 1.5rem 0; padding-top: 1rem;">
+              <div class="form-group">
+                <label>رابط الاختبار الخارجي (URL):</label>
+                <input type="url" id="new-exam-link" placeholder="مثال: https://docs.google.com/forms/..." />
+              </div>
+            </div>
+
+            <button class="btn btn-yellow" style="margin-top: 1.5rem;" onclick="saveExamToCloud()">🚀 نشر الاختبار للطلاب فوراً</button>
+          </div>
+        </div>
+
+        <!-- الجزء الخاص بإضافة مذكرة أو PDF جديد من الهاتف -->
+        <div id="admin-add-resource-section" class="hidden">
+          <div class="exam-box" style="max-width: 500px; margin: 0 auto;">
+            <h3 style="color: var(--accent-yellow); margin-bottom: 1rem;">إضافة مذكرة أو تقييم أسبوعي</h3>
+            
+            <div class="form-group">
+              <label>عنوان المذكرة/التقييم:</label>
+              <input type="text" id="res-title" placeholder="مثال: تقييمات الأسبوع العاشر - مجابة" />
+            </div>
+
+            <div class="form-group">
+              <label>الصف / المرحلة:</label>
+              <select id="res-grade">
+                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                <option value="المرحلة الإعدادية">المرحلة الإعدادية</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>وصف المذكرة:</label>
+              <textarea id="res-desc" rows="2" placeholder="مثال: نماذج (أ، ب، ج) مجابة بالكامل بصيغة PDF"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>رابط الملف (Google Drive أو Telegram):</label>
+              <input type="url" id="res-link" placeholder="ضع رابط الملف هنا..." />
+            </div>
+
+            <button class="btn btn-yellow" onclick="saveResourceToCloud()">📤 نشر وتثبيت في المكتبة فوراً</button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    جميع الحقوق محفوظة &copy; 2026 - منصة مستر محمد عمارة للعلوم والكيمياء
+  </footer>
+
+  <!-- Firebase SDK لتخزين وجلب الاختبارات والنتائج لحظياً -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ضع بيانات مشروع Firebase الخاص بك هنا لربط قاعدة البيانات السحابية:
+    const firebaseConfig = {
+      apiKey: "", // ضع API_KEY هنا
+      authDomain: "",
+      projectId: "", // ضع PROJECT_ID هنا
+      storageBucket: "",
+      messagingSenderId: "",
+      appId: ""
+    };
+
+    window.db = null;
+    window.firestoreFuncs = { collection, addDoc, getDocs, query, orderBy, limit };
+
+    if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+      const app = initializeApp(firebaseConfig);
+      window.db = getFirestore(app);
+      window.initAppAfterFirebase();
+    } else {
+      window.initAppOffline();
+    }
+  </script>
+
+  <script>
+    const TEACHER_PASSWORD = "2026"; // كلمة مرور لوحة تحكم المعلم
+
+    const FALLBACK_RESOURCES = [
+      {
+        title: "تقييمات الأسبوع التاسع - النظم البيئية المائية",
+        grade: "الصف الأول الثانوي - علوم متكاملة",
+        desc: "نماذج (أ، ب، ج) مجابة بالكامل ومنسقة للطباعة والمراجعة.",
+        link: "#"
+      }
+    ];
+
+    const FALLBACK_EXAMS = [
+      {
+        id: "exam_aquatic_01",
+        title: "اختبار تأثير الغازات والإشعاع والضغط على البيئات المائية",
+        grade: "الصف الأول الثانوي - علوم متكاملة",
+        durationMinutes: 15,
+        type: "interactive",
+        description: "اختبار إلكتروني شامل - الزمن 15 دقيقة - محاولة واحدة فقط.",
+        questions: [
+          {
+            q: "1. تزداد ذائبية غاز الأكسجين وثاني أكسيد الكربون في المياه العذبة والمالحة عند:",
+            options: ["ارتفاع درجة الحرارة", "انخفاض درجة الحرارة", "زيادة الملوحة", "قلة حركة الأمواج"],
+            answer: 1
+          },
+          {
+            q: "2. يزداد الضغط الكلي الواقع على كائن بحري بمقدار 1 ضغط جوي (1 atm) كلما نزلنا تحت سطح الماء بمقدار:",
+            options: ["1 متر", "5 أمتار", "10 أمتار", "100 متر"],
+            answer: 2
+          }
+        ]
+      }
+    ];
+
+    let currentExam = null;
+    let timerInterval = null;
+    let secondsRemaining = 0;
+    let studentInfo = { name: "", className: "" };
+    
+    let loadedExams = [...FALLBACK_EXAMS];
+    let loadedResources = [...FALLBACK_RESOURCES];
+    let activeQuestionsCount = 0;
+    let uploadedFileContent = ""; // لتخزين كود الملف المرفوع
+
+    window.initAppAfterFirebase = async function() {
+      await refreshDataFromCloud();
+    };
+
+    window.initAppOffline = function() {
+      renderExams(loadedExams);
+      renderResources(loadedResources);
+    };
+
+    async function refreshDataFromCloud() {
+      if (!window.db) return;
+
+      try {
+        const examsSnap = await window.firestoreFuncs.getDocs(
+          window.firestoreFuncs.collection(window.db, "exams")
+        );
+        const cloudExams = [];
+        examsSnap.forEach(doc => {
+          const data = doc.data();
+          cloudExams.push({ id: doc.id, ...data });
+        });
+
+        if (cloudExams.length > 0) loadedExams = cloudExams;
+
+        const resSnap = await window.firestoreFuncs.getDocs(
+          window.firestoreFuncs.collection(window.db, "resources")
+        );
+        const cloudRes = [];
+        resSnap.forEach(doc => cloudRes.push(doc.data()));
+
+        if (cloudRes.length > 0) loadedResources = cloudRes;
+
+      } catch (err) {
+        console.error("خطأ في جلب البيانات السحابية:", err);
+      }
+
+      renderExams(loadedExams);
+      renderResources(loadedResources);
+    }
+
+    function renderExams(exams) {
+      const examsList = document.getElementById("exams-list");
+      examsList.innerHTML = exams.map(exam => `
+        <div class="card exam-card">
+          <div>
+            <div class="meta-tags">
+              <span class="tag">${exam.grade}</span>
+              <span class="tag">${exam.type === 'interactive' ? `⏱️ ${exam.durationMinutes} دقيقة` : '🔗 اختبار مدمج'}</span>
+              <span class="tag">${exam.type === 'interactive' ? `📝 ${exam.questions.length} أسئلة` : '🌐 مخصص'}</span>
+            </div>
+            <h3>${exam.title}</h3>
+            <p>${exam.description || ''}</p>
+          </div>
+          <button class="btn" onclick="openExamIntro('${exam.id}')">دخول الاختبار</button>
+        </div>
+      `).join("");
+    }
+
+    function renderResources(resources) {
+      const resList = document.getElementById("resources-list");
+      resList.innerHTML = resources.map(res => `
+        <div class="card">
+          <div>
+            <div class="meta-tags"><span class="tag">${res.grade}</span></div>
+            <h3>${res.title}</h3>
+            <p>${res.desc || ''}</p>
+          </div>
+          <a href="${res.link}" target="_blank" class="btn btn-yellow">فتح / تحميل الملف (PDF)</a>
+        </div>
+      `).join("");
+    }
+
+    function switchTab(tabId, btn) {
+      document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById(tabId).classList.add("active");
+      btn.classList.add("active");
+    }
+
+    function toggleExamBuildMethod(value) {
+      document.getElementById("group-duration").classList.add("hidden");
+      document.getElementById("build-method-interactive").classList.add("hidden");
+      document.getElementById("build-method-file").classList.add("hidden");
+      document.getElementById("build-method-embed").classList.add("hidden");
+      document.getElementById("build-method-external").classList.add("hidden");
+
+      if (value === 'interactive') {
+        document.getElementById("group-duration").classList.remove("hidden");
+        document.getElementById("build-method-interactive").classList.remove("hidden");
+      } else if (value === 'file') {
+        document.getElementById("build-method-file").classList.remove("hidden");
+      } else if (value === 'embed') {
+        document.getElementById("build-method-embed").classList.remove("hidden");
+      } else if (value === 'external') {
+        document.getElementById("build-method-external").classList.remove("hidden");
+      }
+    }
+
+    // قراءة ملف الـ HTML المرفوع من الهاتف وتحويله لنص
+    function handleExamFileUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedFileContent = e.target.result;
+        const status = document.getElementById("file-upload-status");
+        status.innerText = `✔️ تم قراءة الملف بنجاح! (${file.name})`;
+        status.classList.remove("hidden");
+      };
+      reader.onerror = function() {
+        alert("فشل في قراءة الملف، يرجى المحاولة مرة أخرى.");
+      };
+      reader.readAsText(file);
+    }
+
+    function switchAdminSubTab(section) {
+      document.getElementById("admin-results-section").classList.add("hidden");
+      document.getElementById("admin-add-exam-section").classList.add("hidden");
+      document.getElementById("admin-add-resource-section").classList.add("hidden");
+      
+      document.getElementById("btn-show-results").classList.remove("active");
+      document.getElementById("btn-add-exam").classList.remove("active");
+      document.getElementById("btn-add-resource").classList.remove("active");
+
+      if (section === 'results') {
+        document.getElementById("admin-results-section").classList.remove("hidden");
+        document.getElementById("btn-show-results").classList.add("active");
+        loadTeacherResults();
+      } else if (section === 'add-exam') {
+        document.getElementById("admin-add-exam-section").classList.remove("hidden");
+        document.getElementById("btn-add-exam").classList.add("active");
+        if (activeQuestionsCount === 0) addNewQuestionInput();
+      } else if (section === 'add-resource') {
+        document.getElementById("admin-add-resource-section").classList.remove("hidden");
+        document.getElementById("btn-add-resource").classList.add("active");
+      }
+    }
+
+    function addNewQuestionInput() {
+      activeQuestionsCount++;
+      const container = document.getElementById("new-questions-container");
+      const qDiv = document.createElement("div");
+      qDiv.className = "question-item";
+      qDiv.id = `q_block_${activeQuestionsCount}`;
+      qDiv.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+          <strong style="color:var(--accent-yellow);">سؤال ${activeQuestionsCount}</strong>
+          <button class="error-msg" style="background:none; border:none; cursor:pointer;" onclick="removeQuestionInput(${activeQuestionsCount})">🗑️ حذف</button>
+        </div>
+        <div class="form-group">
+          <input type="text" class="new-q-text" placeholder="اكتب نص السؤال هنا..." />
+        </div>
+        <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+          <input type="text" class="new-opt-0" placeholder="الخيار الأول" />
+          <input type="text" class="new-opt-1" placeholder="الخيار الثاني" />
+          <input type="text" class="new-opt-2" placeholder="الخيار الثالث" />
+          <input type="text" class="new-opt-3" placeholder="الخيار الرابع" />
+        </div>
+        <div class="form-group">
+          <label>رقم الإجابة الصحيحة:</label>
+          <select class="new-q-ans">
+            <option value="0">الخيار الأول</option>
+            <option value="1">الخيار الثاني</option>
+            <option value="2">الخيار الثالث</option>
+            <option value="3">الخيار الرابع</option>
+          </select>
+        </div>
+      `;
+      container.appendChild(qDiv);
+    }
+
+    function removeQuestionInput(id) {
+      const qBlock = document.getElementById(`q_block_${id}`);
+      if (qBlock) qBlock.remove();
+    }
+
+    async function saveExamToCloud() {
+      if (!window.db) {
+        alert("يرجى ربط قاعدة البيانات السحابية أولاً لتفعيل حفظ الاختبارات.");
+        return;
+      }
+
+      const title = document.getElementById("new-exam-title").value.trim();
+      const grade = document.getElementById("new-exam-grade").value;
+      const desc = document.getElementById("new-exam-desc").value.trim();
+      const type = document.getElementById("new-exam-type").value;
+
+      if (!title) {
+        alert("يرجى كتابة عنوان للاختبار.");
+        return;
+      }
+
+      const newExamData = {
+        title,
+        grade,
+        description: desc,
+        type,
+        id: "exam_" + Date.now()
+      };
+
+      if (type === 'interactive') {
+        const duration = parseInt(document.getElementById("new-exam-duration").value) || 15;
+        const questions = [];
+        const blocks = document.querySelectorAll("#new-questions-container .question-item");
+        
+        blocks.forEach(block => {
+          const qText = block.querySelector(".new-q-text").value.trim();
+          const opt0 = block.querySelector(".new-opt-0").value.trim();
+          const opt1 = block.querySelector(".new-opt-1").value.trim();
+          const opt2 = block.querySelector(".new-opt-2").value.trim();
+          const opt3 = block.querySelector(".new-opt-3").value.trim();
+          const ans = parseInt(block.querySelector(".new-q-ans").value);
+
+          if (qText && opt0 && opt1) {
+            questions.push({
+              q: qText,
+              options: [opt0, opt1, opt2 || "", opt3 || ""].filter(Boolean),
+              answer: ans
+            });
+          }
+        });
+
+        if (questions.length === 0) {
+          alert("يرجى إضافة سؤال واحد على الأقل مع خياراته.");
+          return;
+        }
+
+        newExamData.durationMinutes = duration;
+        newExamData.questions = questions;
+
+      } else if (type === 'file') {
+        if (!uploadedFileContent) {
+          alert("يرجى تحديد ورفع ملف HTML أولاً.");
+          return;
+        }
+        newExamData.embed = uploadedFileContent; // حفظ محتوى الملف المرفوع ككود تشغيل
+
+      } else if (type === 'embed') {
+        const embed = document.getElementById("new-exam-embed").value.trim();
+        if (!embed) {
+          alert("يرجى إضافة كود التضمين البرمجي.");
+          return;
+        }
+        newExamData.embed = embed;
+
+      } else if (type === 'external') {
+        const link = document.getElementById("new-exam-link").value.trim();
+        if (!link) {
