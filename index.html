@@ -1361,43 +1361,61 @@
       document.getElementById("external-exam-runner").classList.remove("hidden");
       document.getElementById("ext-active-student").innerText="الطالب: "+studentInfo.name;
       const container=document.getElementById("frame-container");container.innerHTML="";
-      if(currentExam.type==="external"){
-        const frame=document.createElement("iframe");
-        frame.className="embedded-frame";
-        frame.src=currentExam.external_url;
-        frame.referrerPolicy="no-referrer";
-        frame.title="الاختبار الخارجي";
-        container.appendChild(frame);
-      } else {
-        const frame=document.createElement("iframe");
-        frame.className="embedded-frame";
-        frame.title="اختبار HTML مدمج";
-        // Keep the opaque-origin sandbox. Do not add allow-same-origin.
-        // allow-modals is needed by HTML exams using alert()/confirm().
-        frame.setAttribute("sandbox","allow-forms allow-scripts allow-modals");
-        let html=String(currentExam.html_content||"");
-        if(/<head\b[^>]*>/i.test(html)){
-          html=html.replace(/<head\b[^>]*>/i,match=>match+"<script>\n(function () {\n  \"use strict\";\n  var prefix = \"__EMARA_HTML_EXAM_STORAGE__:\";\n  function readStore() {\n    try {\n      var raw = window.name || \"\";\n      if (raw.indexOf(prefix) !== 0) return {};\n      var parsed = JSON.parse(raw.slice(prefix.length));\n      return parsed && typeof parsed === \"object\" && !Array.isArray(parsed) ? parsed : {};\n    } catch (_) { return {}; }\n  }\n  function writeStore(store) {\n    try { window.name = prefix + JSON.stringify(store); } catch (_) {}\n  }\n  var storage = {\n    getItem: function (key) {\n      var store = readStore(); key = String(key);\n      return Object.prototype.hasOwnProperty.call(store, key) ? String(store[key]) : null;\n    },\n    setItem: function (key, value) {\n      var store = readStore(); store[String(key)] = String(value); writeStore(store);\n    },\n    removeItem: function (key) {\n      var store = readStore(); delete store[String(key)]; writeStore(store);\n    },\n    clear: function () { writeStore({}); },\n    key: function (index) {\n      var keys = Object.keys(readStore());\n      return Number.isInteger(Number(index)) && Number(index) >= 0 ? (keys[Number(index)] || null) : null;\n    }\n  };\n  Object.defineProperty(storage, \"length\", { enumerable: true, get: function () { return Object.keys(readStore()).length; } });\n  try { Object.defineProperty(window, \"localStorage\", { configurable: true, value: storage }); }\n  catch (_) { try { window.localStorage = storage; } catch (__) {} }\n})();\n<\/script>");
-        }else{
-          html="<!doctype html><html><head>"+"<script>\n(function () {\n  \"use strict\";\n  var prefix = \"__EMARA_HTML_EXAM_STORAGE__:\";\n  function readStore() {\n    try {\n      var raw = window.name || \"\";\n      if (raw.indexOf(prefix) !== 0) return {};\n      var parsed = JSON.parse(raw.slice(prefix.length));\n      return parsed && typeof parsed === \"object\" && !Array.isArray(parsed) ? parsed : {};\n    } catch (_) { return {}; }\n  }\n  function writeStore(store) {\n    try { window.name = prefix + JSON.stringify(store); } catch (_) {}\n  }\n  var storage = {\n    getItem: function (key) {\n      var store = readStore(); key = String(key);\n      return Object.prototype.hasOwnProperty.call(store, key) ? String(store[key]) : null;\n    },\n    setItem: function (key, value) {\n      var store = readStore(); store[String(key)] = String(value); writeStore(store);\n    },\n    removeItem: function (key) {\n      var store = readStore(); delete store[String(key)]; writeStore(store);\n    },\n    clear: function () { writeStore({}); },\n    key: function (index) {\n      var keys = Object.keys(readStore());\n      return Number.isInteger(Number(index)) && Number(index) >= 0 ? (keys[Number(index)] || null) : null;\n    }\n  };\n  Object.defineProperty(storage, \"length\", { enumerable: true, get: function () { return Object.keys(readStore()).length; } });\n  try { Object.defineProperty(window, \"localStorage\", { configurable: true, value: storage }); }\n  catch (_) { try { window.localStorage = storage; } catch (__) {} }\n})();\n<\/script>"+"</head><body>"+html+"</body></html>";
-        }
-        frame.srcdoc=html;
-        container.appendChild(frame);
-      }
+      const frame=document.createElement("iframe");frame.className="embedded-frame";
+      frame.title=currentExam.type==="external"?"الاختبار الخارجي":"اختبار HTML مدمج";
+      if(currentExam.type==="external"){frame.src=currentExam.external_url;frame.referrerPolicy="no-referrer";container.appendChild(frame);return;}
+      frame.setAttribute("sandbox","allow-forms allow-scripts allow-modals");
+      let html=String(currentExam.html_content||"");
+      const bridgeScript=[
+        "(function(){","  'use strict';","  var prefix='__EMARA_HTML_EXAM_STORAGE__:';",
+        "  function readStore(){try{var raw=window.name||'';if(raw.indexOf(prefix)!==0)return {};var value=JSON.parse(raw.slice(prefix.length));return value&&typeof value==='object'&&!Array.isArray(value)?value:{};}catch(_){return {};}}",
+        "  function writeStore(value){try{window.name=prefix+JSON.stringify(value);}catch(_){}}",
+        "  var storage={getItem:function(k){var s=readStore();k=String(k);return Object.prototype.hasOwnProperty.call(s,k)?String(s[k]):null;},setItem:function(k,v){var s=readStore();s[String(k)]=String(v);writeStore(s);},removeItem:function(k){var s=readStore();delete s[String(k)];writeStore(s);},clear:function(){writeStore({});},key:function(i){var a=Object.keys(readStore());i=Number(i);return Number.isInteger(i)&&i>=0?(a[i]||null):null;}};",
+        "  Object.defineProperty(storage,'length',{enumerable:true,get:function(){return Object.keys(readStore()).length;}});",
+        "  try{Object.defineProperty(window,'localStorage',{configurable:true,value:storage});}catch(_){try{window.localStorage=storage;}catch(__){}}",
+        "  window.addEventListener('message',function(event){var msg=event.data;if(event.source!==parent||!msg||msg.type!=='emara:collect-submission'||typeof msg.token!=='string')return;",
+        "    var fields={},count=0;document.querySelectorAll('input,textarea,select').forEach(function(el){if(count>=300)return;var type=String(el.type||'').toLowerCase();if(['password','file','submit','button','reset','image'].indexOf(type)>=0)return;if((type==='radio'||type==='checkbox')&&!el.checked)return;var key=String(el.name||el.id||'').slice(0,120);if(!key)return;var value=String(el.value==null?'':el.value).slice(0,4000);if(Object.prototype.hasOwnProperty.call(fields,key)){if(!Array.isArray(fields[key]))fields[key]=[fields[key]];fields[key].push(value);}else fields[key]=value;count++;});",
+        "    var payload={version:1,capture_status:'captured',storage:readStore(),form_fields:fields,captured_at:new Date().toISOString()};parent.postMessage({type:'emara:html-submission',token:msg.token,payload:payload},'*');});","})();"
+      ].join('\n');
+      const bootstrap="<script>\n"+bridgeScript+"\n<\/script>";
+      if(/<head\b[^>]*>/i.test(html))html=html.replace(/<head\b[^>]*>/i,match=>match+bootstrap);
+      else html="<!doctype html><html><head>"+bootstrap+"</head><body>"+html+"</body></html>";
+      frame.srcdoc=html;container.appendChild(frame);
+    }
+    async function collectEmbeddedHtmlSubmission() {
+      const frame=document.querySelector("#frame-container iframe");if(!frame||!frame.contentWindow)throw new Error("لم يتم تحميل إطار الاختبار.");
+      const token=crypto.randomUUID();
+      return await new Promise((resolve,reject)=>{
+        let settled=false;const cleanup=()=>{window.removeEventListener("message",onMessage);clearTimeout(timer);};
+        const timer=setTimeout(()=>{if(settled)return;settled=true;cleanup();reject(new Error("لم تصل بيانات الإجابات من صفحة الاختبار. لا تغلق الصفحة، واضغط التسليم مرة أخرى."));},6000);
+        const onMessage=event=>{if(event.source!==frame.contentWindow||!event.data||event.data.type!=="emara:html-submission"||event.data.token!==token||settled)return;
+          try{const payload=event.data.payload;if(!payload||payload.capture_status!=="captured")throw new Error("بيانات التسليم غير مكتملة.");if(new Blob([JSON.stringify(payload)]).size>650*1024)throw new Error("حجم الإجابات أكبر من الحد المسموح. أبلغ المعلم.");settled=true;cleanup();resolve(payload);}
+          catch(error){settled=true;cleanup();reject(error);}};
+        window.addEventListener("message",onMessage);frame.contentWindow.postMessage({type:"emara:collect-submission",token},"*");
+      });
     }
     async function finishExternalExam() {
+      const button=document.querySelector("#external-exam-runner .exam-header-bar button");if(button?.disabled)return;
       if(!confirm("هل أنت متأكد من إنهاء الاختبار وتسجيل التسليم؟"))return;
-      const {data,error}=await window.supabaseClient.functions.invoke("exam-api",{body:{action:"submit",exam_id:currentExam.id,session_id:window.currentExamSessionId,device_id:window.currentExamDeviceId,answers:{}}});
-      if(error||!data?.ok){alert(data?.error||error?.message||"تعذر تسجيل التسليم.");return;}
-      localStorage.setItem("completed_"+currentExam.id,"true");
-      document.getElementById("external-exam-runner").classList.add("hidden");document.getElementById("exam-result").classList.remove("hidden");
-      document.getElementById("result-title-main").innerText="شكراً لك!";
-      document.getElementById("result-student-name").innerText=studentInfo.name+" ("+studentInfo.className+")";
-      document.getElementById("score-circle-container").classList.add("hidden");
-      document.getElementById("review-container").innerHTML="<p>تم تسجيل تسليم الاختبار في Supabase.</p>";
-      document.getElementById("submission-status").innerText="تم تسجيل التسليم بنجاح.";
-      trackStudentActivity("تسليم اختبار مدمج","أنهى اختبار: "+currentExam.title);
-      await refreshDataFromCloud();
+      if(button){button.disabled=true;button.innerText="جارٍ حفظ التسليم...";}
+      try{
+        const htmlSubmission=currentExam.type==="external"
+          ?{version:1,capture_status:"external_unverified",external_url:currentExam.external_url||"",student_confirmed:true,submitted_from:"platform",captured_at:new Date().toISOString()}
+          :await collectEmbeddedHtmlSubmission();
+        const {data,error}=await window.supabaseClient.functions.invoke("exam-api",{body:{action:"submit",exam_id:currentExam.id,session_id:window.currentExamSessionId,device_id:window.currentExamDeviceId,html_submission:htmlSubmission}});
+        if(error||!data?.ok)throw new Error(data?.error||error?.message||"تعذر تسجيل التسليم.");
+        localStorage.setItem("completed_"+currentExam.id,"true");
+        document.getElementById("external-exam-runner").classList.add("hidden");document.getElementById("exam-result").classList.remove("hidden");
+        document.getElementById("result-title-main").innerText="تم استلام التسليم";
+        document.getElementById("result-student-name").innerText=studentInfo.name+" ("+studentInfo.className+")";
+        document.getElementById("score-circle-container").classList.add("hidden");
+        document.getElementById("review-container").innerText=currentExam.type==="external"
+          ?"تم تسجيل انتهاء الاختبار. لكن الرابط الخارجي لا يسمح للمنصة بقراءة الإجابات تلقائياً؛ يلزم مراجعة التسليم من مصدر الاختبار."
+          :"تم حفظ بيانات صفحة الاختبار وإجاباتها الملتقطة في قاعدة البيانات. الدرجة تحتاج مراجعة المعلم ولا تُعتمد من المتصفح.";
+        document.getElementById("submission-status").innerText="تم تثبيت التسليم في قاعدة البيانات.";
+        trackStudentActivity("تسليم اختبار مدمج","تم تسجيل تسليم: "+currentExam.title);await refreshDataFromCloud();
+      }catch(error){console.error("HTML exam submission failed:",error);alert(error?.message||"تعذر حفظ التسليم. لم يتم تسجيله كمكتمل؛ أعد المحاولة.");}
+      finally{if(button){button.disabled=false;button.innerText="أنهيت الاختبار";}}
     }
     function updateTimerUI() {
       const mins = Math.floor(secondsRemaining / 60);
@@ -1481,12 +1499,12 @@
           body: { action: "dashboard" }
         });
         if (error) throw error;
-        const rows = (data?.results || []).map(r => ({
-          id: r.id, studentName: r.student_name, className: r.class_name,
-          examTitle: (data.exams || []).find(e => e.id === r.exam_id)?.title || "اختبار",
-          score: r.score == null ? (r.status || "—") : `${r.score} / ${r.max_score}`,
-          timestamp: r.submitted_at || r.started_at || ""
-        }));
+        const rows = (data?.results || []).map(r => {
+          const exam=(data.exams || []).find(e => e.id === r.exam_id);
+          return {id:r.id,studentName:r.student_name,className:r.class_name,examTitle:exam?.title||"اختبار",
+            score:r.has_html_submission?"تم التسليم — يحتاج مراجعة":(r.score==null?(r.status||"—"):`${r.score} / ${r.max_score}`),
+            hasHtmlSubmission:!!r.has_html_submission,timestamp:r.submitted_at||r.started_at||""};
+        });
         window.cachedResults = rows;
         if (!rows.length) {
           tbody.innerHTML = "<tr><td colspan='5'>لا توجد نتائج مسجلة حتى الآن.</td></tr>";
@@ -1494,13 +1512,30 @@
         }
         tbody.innerHTML = rows.map(r => `
           <tr><td><strong>${r.studentName || ""}</strong></td><td>${r.className || ""}</td>
-          <td>${r.examTitle}</td><td style="color:var(--accent-yellow);font-weight:700;">${r.score}</td>
+          <td>${r.examTitle}${r.hasHtmlSubmission ? `<button class="btn btn-secondary" style="margin-top:6px;padding:4px 8px;font-size:.78rem" onclick="viewHtmlSubmission('${r.id}')">عرض التسليم</button>` : ""}</td>
+          <td style="color:var(--accent-yellow);font-weight:700;">${r.score}</td>
           <td>${r.timestamp ? new Date(r.timestamp).toLocaleString("ar-EG") : "—"}</td></tr>
         `).join("");
       } catch (e) {
         console.error("Supabase dashboard load failed:", e);
         tbody.innerHTML = "<tr><td colspan='5'>تعذر تحميل النتائج من Supabase. تحقق من الجلسة واتصال الخدمة.</td></tr>";
       }
+    }
+
+    async function viewHtmlSubmission(sessionId) {
+      try {
+        const {data,error}=await window.supabaseClient.functions.invoke("owner-control",{body:{action:"get_review",session_id:sessionId}});
+        if(error||!data?.session)throw new Error(data?.error||error?.message||"تعذر تحميل التسليم.");
+        const payload=data.session.answers?.__html_submission;if(!payload)throw new Error("لا توجد حزمة تسليم محفوظة لهذه المحاولة.");
+        let overlay=document.getElementById("html-submission-modal");if(overlay)overlay.remove();
+        overlay=document.createElement("div");Object.assign(overlay.style,{position:"fixed",inset:"0",zIndex:"5000",background:"rgba(0,0,0,.82)",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"});
+        const panel=document.createElement("div");Object.assign(panel.style,{width:"min(900px,100%)",maxHeight:"85vh",overflow:"auto",background:"#27272a",color:"#f4f4f5",border:"2px solid #facc15",borderRadius:"12px",padding:"18px",direction:"rtl"});
+        const heading=document.createElement("h3");heading.textContent="تفاصيل تسليم الاختبار";heading.style.color="#facc15";
+        const info=document.createElement("p");info.textContent="البيانات مستلمة من صفحة الاختبار. أي درجة واردة من HTML غير موثّقة حتى يراجعها المعلم.";
+        const pre=document.createElement("pre");pre.textContent=JSON.stringify(payload,null,2);Object.assign(pre.style,{whiteSpace:"pre-wrap",overflowWrap:"anywhere",background:"#111827",padding:"12px",borderRadius:"8px",maxHeight:"60vh",overflow:"auto",direction:"ltr",textAlign:"left",fontSize:"12px"});
+        const close=document.createElement("button");close.className="btn btn-yellow";close.textContent="إغلاق";close.style.marginTop="12px";close.onclick=()=>overlay.remove();
+        panel.append(heading,info,pre,close);overlay.appendChild(panel);overlay.addEventListener("click",event=>{if(event.target===overlay)overlay.remove();});document.body.appendChild(overlay);
+      }catch(error){alert(error?.message||"تعذر عرض بيانات التسليم.");}
     }
 
     async function loadStudentActivities() {
