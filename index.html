@@ -992,36 +992,18 @@
     }
 
     async function refreshDataFromCloud() {
-      if (!window.db) return;
-
+      const client=window.supabaseClient; if(!client)return;
       try {
-        const examsSnap = await window.firestoreFuncs.getDocs(
-          window.firestoreFuncs.collection(window.db, "exams")
-        );
-        const cloudExams = [];
-        examsSnap.forEach(d => {
-          const data = d.data();
-          cloudExams.push({ docId: d.id, id: data.id || d.id, ...data });
-        });
-        if (cloudExams.length > 0) loadedExams = cloudExams;
-
-        const resSnap = await window.firestoreFuncs.getDocs(
-          window.firestoreFuncs.collection(window.db, "resources")
-        );
-        const cloudRes = [];
-        resSnap.forEach(d => {
-          cloudRes.push({ docId: d.id, ...d.data() });
-        });
-        if (cloudRes.length > 0) loadedResources = cloudRes;
-
-      } catch (err) {
-        console.error("خطأ في جلب البيانات:", err);
-      }
-
-      renderExams(loadedExams);
-      renderResources(loadedResources);
+        const [ex,rs]=await Promise.all([
+          client.functions.invoke("exam-api",{body:{action:"list_exams"}}),
+          client.functions.invoke("exam-api",{body:{action:"list_resources"}})
+        ]);
+        if(ex.error)throw ex.error; if(rs.error)throw rs.error;
+        loadedExams=(ex.data?.exams||[]).map(e=>({...e,docId:e.id,type:e.exam_type||"interactive",durationMinutes:e.duration_minutes,description:e.description||""}));
+        loadedResources=(rs.data?.resources||[]).map(r=>({...r,docId:r.id,grade:"عام",desc:r.description||"",link:r.resource_url}));
+        renderExams(loadedExams); renderResources(loadedResources);
+      } catch(err){console.error("Supabase refresh:",err);const b=document.getElementById("cloud-status-badge");if(b){b.innerText="تعذر تحديث المحتوى السحابي";b.style.background="#b45309";}}
     }
-
     function renderExams(exams) {
       const examsList = document.getElementById("exams-list");
       if (exams.length === 0) {
@@ -1271,53 +1253,17 @@
     }
 
     async function deleteExamItem(index) {
-      const item = loadedExams[index];
-      if (!item || !confirm(`هل أنت متأكد من حذف الاختبار: "${item.title}" نهائياً؟`)) return;
-
-      if (window.db && item.docId && !item.docId.startsWith("local_")) {
-        try {
-          await window.firestoreFuncs.deleteDoc(
-            window.firestoreFuncs.doc(window.db, "exams", item.docId)
-          );
-          alert("✅ تم حذف الاختبار من قاعدة البيانات والمنصة بنجاح.");
-          await refreshDataFromCloud();
-          renderManageContentLists();
-        } catch (err) {
-          console.error(err);
-          alert("حدث خطأ أثناء الحذف من السحاب.");
-        }
-      } else {
-        loadedExams.splice(index, 1);
-        renderExams(loadedExams);
-        renderManageContentLists();
-        alert("✅ تم حذف الاختبار.");
-      }
+      const item=loadedExams[index];if(!item||!confirm("حذف الاختبار: "+item.title+"؟"))return;
+      const {data,error}=await window.supabaseClient.functions.invoke("owner-control",{body:{action:"delete_exam",id:item.id}});
+      if(error||!data?.ok){alert(data?.error||error?.message||"تعذر الحذف.");return;}
+      await refreshDataFromCloud();renderManageContentLists();
     }
-
     async function deleteResourceItem(index) {
-      const item = loadedResources[index];
-      if (!item || !confirm(`هل أنت متأكد من حذف المذكرة: "${item.title}" نهائياً؟`)) return;
-
-      if (window.db && item.docId && !item.docId.startsWith("local_")) {
-        try {
-          await window.firestoreFuncs.deleteDoc(
-            window.firestoreFuncs.doc(window.db, "resources", item.docId)
-          );
-          alert("✅ تم حذف المذكرة من المكتبة بنجاح.");
-          await refreshDataFromCloud();
-          renderManageContentLists();
-        } catch (err) {
-          console.error(err);
-          alert("حدث خطأ أثناء الحذف من السحاب.");
-        }
-      } else {
-        loadedResources.splice(index, 1);
-        renderResources(loadedResources);
-        renderManageContentLists();
-        alert("✅ تم حذف المذكرة.");
-      }
+      const item=loadedResources[index];if(!item||!confirm("حذف المذكرة: "+item.title+"؟"))return;
+      const {data,error}=await window.supabaseClient.functions.invoke("owner-control",{body:{action:"delete_resource",id:item.id}});
+      if(error||!data?.ok){alert(data?.error||error?.message||"تعذر الحذف.");return;}
+      await refreshDataFromCloud();renderManageContentLists();
     }
-
     function addNewQuestionInput() {
       activeQuestionsCount++;
       const container = document.getElementById("new-questions-container");
@@ -1357,156 +1303,53 @@
     }
 
     async function saveExamToCloud() {
-      if (!window.db) {
-        alert("يرجى وضع بيانات مشروع Firebase في الكود أولاً لتفعيل الحفظ السحابي.");
-        return;
-      }
-
-      const title = document.getElementById("new-exam-title").value.trim();
-      const grade = document.getElementById("new-exam-grade").value;
-      const desc = document.getElementById("new-exam-desc").value.trim();
-      const type = document.getElementById("new-exam-type").value;
-
-      if (!title) {
-        alert("يرجى كتابة عنوان للاختبار.");
-        return;
-      }
-
-      const newExamData = {
-        title,
-        grade,
-        description: desc,
-        type,
-        id: "exam_" + Date.now()
-      };
-
-      if (type === 'interactive') {
-        const duration = parseInt(document.getElementById("new-exam-duration").value) || 15;
-        const questions = [];
-        const blocks = document.querySelectorAll("#new-questions-container .question-item");
-        
-        blocks.forEach(block => {
-          const qText = block.querySelector(".new-q-text").value.trim();
-          const opt0 = block.querySelector(".new-opt-0").value.trim();
-          const opt1 = block.querySelector(".new-opt-1").value.trim();
-          const opt2 = block.querySelector(".new-opt-2").value.trim();
-          const opt3 = block.querySelector(".new-opt-3").value.trim();
-          const ans = parseInt(block.querySelector(".new-q-ans").value);
-
-          if (qText && opt0 && opt1) {
-            questions.push({
-              q: qText,
-              options: [opt0, opt1, opt2 || "", opt3 || ""].filter(Boolean),
-              answer: ans
-            });
-          }
+      const client=window.supabaseClient; const {data:sessionData}=await client.auth.getSession();
+      if(!sessionData?.session){alert("سجّل دخول المعلم أولاً.");return;}
+      const title=document.getElementById("new-exam-title").value.trim();
+      const grade=document.getElementById("new-exam-grade").value;
+      const description=document.getElementById("new-exam-desc").value.trim();
+      const selected=document.getElementById("new-exam-type").value;
+      const typeMap={interactive:"interactive",file:"html_file",embed:"html_embed",external:"external"};
+      const payload={action:"save_exam",title,grade,description,exam_type:typeMap[selected],published:true,duration_minutes:parseInt(document.getElementById("new-exam-duration").value)||15,max_attempts:1,questions:[]};
+      if(title.length<3){alert("اكتب عنوانًا واضحًا للاختبار.");return;}
+      if(selected==="interactive"){
+        document.querySelectorAll("#new-questions-container .question-item").forEach(block=>{
+          const prompt=block.querySelector(".new-q-text").value.trim();
+          const options=[0,1,2,3].map(i=>block.querySelector(".new-opt-"+i).value.trim()).filter(Boolean);
+          const correct_option=parseInt(block.querySelector(".new-q-ans").value);
+          if(prompt&&options.length>=2)payload.questions.push({prompt,options,correct_option,points:1});
         });
-
-        if (questions.length === 0) {
-          alert("يرجى إضافة سؤال واحد على الأقل مع خياراته.");
-          return;
-        }
-
-        newExamData.durationMinutes = duration;
-        newExamData.questions = questions;
-
-      } else if (type === 'file') {
-        if (!uploadedFileContent) {
-          alert("يرجى تحديد ورفع ملف HTML أولاً.");
-          return;
-        }
-        newExamData.embed = uploadedFileContent;
-
-      } else if (type === 'embed') {
-        const embed = document.getElementById("new-exam-embed").value.trim();
-        if (!embed) {
-          alert("يرجى إضافة كود التضمين البرمجي.");
-          return;
-        }
-        newExamData.embed = embed;
-
-      } else if (type === 'external') {
-        const link = document.getElementById("new-exam-link").value.trim();
-        if (!link) {
-          alert("يرجى إضافة رابط الاختبار الخارجي.");
-          return;
-        }
-        newExamData.link = link;
-      }
-
-      try {
-        await window.firestoreFuncs.addDoc(
-          window.firestoreFuncs.collection(window.db, "exams"),
-          newExamData
-        );
-        alert("🎉 تم نشر الاختبار الجديد بنجاح على هواتف الطلاب!");
-        
-        document.getElementById("new-exam-title").value = "";
-        document.getElementById("new-exam-link").value = "";
-        document.getElementById("new-exam-embed").value = "";
-        document.getElementById("new-questions-container").innerHTML = "";
-        document.getElementById("new-exam-file-input").value = "";
-        document.getElementById("file-upload-status").classList.add("hidden");
-        uploadedFileContent = "";
-        activeQuestionsCount = 0;
-        await refreshDataFromCloud();
-        switchTab('exams-tab', document.querySelector("nav button"));
-      } catch (err) {
-        console.error("خطأ في حفظ الاختبار:", err);
-        alert("فشل نشر الاختبار. تأكد من تفعيل Firestore في مشروعك.");
-      }
+      }else if(selected==="file"){
+        if(!uploadedFileContent){alert("اختر ملف HTML أولاً.");return;} payload.html_content=uploadedFileContent;
+      }else if(selected==="embed"){payload.html_content=document.getElementById("new-exam-embed").value.trim();}
+      else {payload.external_url=document.getElementById("new-exam-link").value.trim();}
+      const {data,error}=await client.functions.invoke("owner-control",{body:payload});
+      if(error||!data?.ok){alert(data?.error||error?.message||"تعذر نشر الاختبار.");return;}
+      alert("تم حفظ الاختبار ونشره عبر Supabase.");
+      ["new-exam-title","new-exam-desc","new-exam-link","new-exam-embed"].forEach(id=>document.getElementById(id).value="");
+      document.getElementById("new-questions-container").innerHTML="";document.getElementById("new-exam-file-input").value="";
+      document.getElementById("file-upload-status").classList.add("hidden");uploadedFileContent="";activeQuestionsCount=0;
+      await refreshDataFromCloud();await loadTeacherResults();renderManageContentLists();
     }
-
     async function saveResourceToCloud() {
-      if (!window.db) {
-        alert("يرجى وضع بيانات مشروع Firebase في الكود أولاً لتفعيل نشر المذكرات.");
-        return;
-      }
-
-      const title = document.getElementById("res-title").value.trim();
-      const grade = document.getElementById("res-grade").value;
-      const desc = document.getElementById("res-desc").value.trim();
-      const link = document.getElementById("res-link").value.trim();
-
-      if (!title || !link) {
-        alert("يرجى ملء عنوان المذكرة ورابط التحميل.");
-        return;
-      }
-
-      const newResource = { title, grade, desc, link, id: "res_" + Date.now() };
-
-      try {
-        await window.firestoreFuncs.addDoc(
-          window.firestoreFuncs.collection(window.db, "resources"),
-          newResource
-        );
-        alert("🎉 تم نشر وتثبيت المذكرة/التقييم بنجاح في مكتبة الطلاب!");
-        
-        document.getElementById("res-title").value = "";
-        document.getElementById("res-desc").value = "";
-        document.getElementById("res-link").value = "";
-        
-        await refreshDataFromCloud();
-        switchTab('resources-tab', document.querySelectorAll("nav button")[1]);
-      } catch (err) {
-        console.error("خطأ في النشر:", err);
-        alert("حدث خطأ أثناء النشر.");
-      }
+      const title=document.getElementById("res-title").value.trim(),description=document.getElementById("res-desc").value.trim(),resource_url=document.getElementById("res-link").value.trim();
+      if(!title||!/^https?:\/\//i.test(resource_url)){alert("اكتب عنوانًا ورابطًا صحيحًا.");return;}
+      const {data,error}=await window.supabaseClient.functions.invoke("owner-control",{body:{action:"save_resource",title,description,resource_url,resource_type:"link",published:true}});
+      if(error||!data?.ok){alert(data?.error||error?.message||"تعذر حفظ المذكرة.");return;}
+      alert("تم نشر المذكرة في مكتبة الطلاب عبر Supabase.");
+      ["res-title","res-desc","res-link"].forEach(id=>document.getElementById(id).value="");
+      await refreshDataFromCloud();renderManageContentLists();
     }
-
-    function openExamIntro(examId) {
-      if (localStorage.getItem("completed_" + examId)) {
-        alert("⚠️ لقد قمت بأداء هذا الاختبار مسبقاً من هذا الجهاز. غير مسموح بإعادة المحاولة.");
-        return;
-      }
-
-      currentExam = loadedExams.find(e => e.id === examId);
-      document.getElementById("intro-exam-title").innerText = currentExam.title;
-      document.getElementById("intro-exam-desc").innerText = currentExam.description || '';
-      document.getElementById("exams-list").classList.add("hidden");
-      document.getElementById("exam-intro").classList.remove("hidden");
+    async function openExamIntro(examId) {
+      const found=loadedExams.find(e=>e.id===examId);if(!found)return;
+      if(localStorage.getItem("completed_"+examId)){alert("لقد أديت هذا الاختبار من هذا الجهاز بالفعل.");return;}
+      const {data,error}=await window.supabaseClient.functions.invoke("exam-api",{body:{action:"get_exam",exam_id:examId}});
+      if(error||!data?.exam){alert(data?.error||"تعذر تحميل الاختبار.");return;}
+      currentExam={...found,...data.exam,type:data.exam.exam_type||found.type,durationMinutes:data.exam.duration_minutes,questions:(data.questions||[]).map(q=>({id:q.id,q:q.prompt,options:q.options,points:q.points}))};
+      document.getElementById("intro-exam-title").innerText=currentExam.title;
+      document.getElementById("intro-exam-desc").innerText=currentExam.description||"";
+      document.getElementById("exams-list").classList.add("hidden");document.getElementById("exam-intro").classList.remove("hidden");
     }
-
     function cancelExamIntro() {
       document.getElementById("exam-intro").classList.add("hidden");
       document.getElementById("exams-list").classList.remove("hidden");
@@ -1574,23 +1417,11 @@
 
     function runExternalExam() {
       document.getElementById("external-exam-runner").classList.remove("hidden");
-      document.getElementById("ext-active-student").innerText = "الطالب: " + studentInfo.name;
-      
-      const container = document.getElementById("frame-container");
-      
-      if (currentExam.type === "external") {
-        container.innerHTML = `<iframe src="${currentExam.link}" class="embedded-frame"></iframe>`;
-      } else if (currentExam.type === "embed" || currentExam.type === "file") {
-        const iframe = document.createElement("iframe");
-        iframe.className = "embedded-frame";
-        container.innerHTML = "";
-        container.appendChild(iframe);
-        iframe.contentWindow.document.open();
-        iframe.contentWindow.document.write(currentExam.embed);
-        iframe.contentWindow.document.close();
-      }
+      document.getElementById("ext-active-student").innerText="الطالب: "+studentInfo.name;
+      const container=document.getElementById("frame-container");container.innerHTML="";
+      if(currentExam.type==="external"){const frame=document.createElement("iframe");frame.className="embedded-frame";frame.src=currentExam.external_url;frame.referrerPolicy="no-referrer";container.appendChild(frame);}
+      else{const frame=document.createElement("iframe");frame.className="embedded-frame";frame.setAttribute("sandbox","allow-forms allow-scripts");frame.srcdoc=currentExam.html_content||"";container.appendChild(frame);}
     }
-
     async function finishExternalExam() {
       if (!confirm("هل أنت متأكد من إنهاء أداء الاختبار وتسجيل حضورك؟")) return;
 
