@@ -1394,6 +1394,22 @@
         window.addEventListener("message",onMessage);frame.contentWindow.postMessage({type:"emara:collect-submission",token},"*");
       });
     }
+    function readHtmlReportedScore(submissionOrRecord) {
+      try {
+        let record=submissionOrRecord;
+        if(record && typeof record==="object" && record.storage){
+          record=record.storage.emara_integrated_science_exam_v1;
+        }
+        if(typeof record==="string") record=JSON.parse(record);
+        if(!record || typeof record!=="object") return null;
+        const score=Number(record.score), percentage=Number(record.percentage);
+        if(!Number.isFinite(score)||!Number.isFinite(percentage)||score<0||percentage<0||percentage>100) return null;
+        const maxScore=percentage>0?Math.round(score/(percentage/100)):0;
+        if(!Number.isFinite(maxScore)||maxScore<=0||maxScore<score) return null;
+        return {score,maxScore,percentage};
+      } catch (_) { return null; }
+    }
+
     async function finishExternalExam() {
       const button=document.querySelector("#external-exam-runner .exam-header-bar button");if(button?.disabled)return;
       if(!confirm("هل أنت متأكد من إنهاء الاختبار وتسجيل التسليم؟"))return;
@@ -1408,10 +1424,17 @@
         document.getElementById("external-exam-runner").classList.add("hidden");document.getElementById("exam-result").classList.remove("hidden");
         document.getElementById("result-title-main").innerText="تم استلام التسليم";
         document.getElementById("result-student-name").innerText=studentInfo.name+" ("+studentInfo.className+")";
-        document.getElementById("score-circle-container").classList.add("hidden");
-        document.getElementById("review-container").innerText=currentExam.type==="external"
-          ?"تم تسجيل انتهاء الاختبار. لكن الرابط الخارجي لا يسمح للمنصة بقراءة الإجابات تلقائياً؛ يلزم مراجعة التسليم من مصدر الاختبار."
-          :"تم حفظ بيانات صفحة الاختبار وإجاباتها الملتقطة في قاعدة البيانات. الدرجة تحتاج مراجعة المعلم ولا تُعتمد من المتصفح.";
+        const htmlReportedScore=readHtmlReportedScore(htmlSubmission);
+        if(currentExam.type!=="external" && htmlReportedScore){
+          document.getElementById("score-circle-container").classList.remove("hidden");
+          document.getElementById("score-value").innerText=htmlReportedScore.score+" / "+htmlReportedScore.maxScore;
+          document.getElementById("review-container").innerText="النتيجة التي سجلتها صفحة الاختبار: "+htmlReportedScore.score+" / "+htmlReportedScore.maxScore+" ("+htmlReportedScore.percentage+"%). الدرجة معلنة من صفحة HTML وليست تصحيحاً مستقلاً من الخادم، وتظل بانتظار اعتماد المعلم.";
+        }else{
+          document.getElementById("score-circle-container").classList.add("hidden");
+          document.getElementById("review-container").innerText=currentExam.type==="external"
+            ?"تم تسجيل انتهاء الاختبار. لكن الرابط الخارجي لا يسمح للمنصة بقراءة الإجابات تلقائياً؛ يلزم مراجعة التسليم من مصدر الاختبار."
+            :"تم حفظ بيانات صفحة الاختبار وإجاباتها الملتقطة في قاعدة البيانات. لم تُرسل الصفحة درجة قابلة للعرض؛ يلزم مراجعة المعلم.";
+        }
         document.getElementById("submission-status").innerText="تم تثبيت التسليم في قاعدة البيانات.";
         trackStudentActivity("تسليم اختبار مدمج","تم تسجيل تسليم: "+currentExam.title);await refreshDataFromCloud();
       }catch(error){console.error("HTML exam submission failed:",error);alert(error?.message||"تعذر حفظ التسليم. لم يتم تسجيله كمكتمل؛ أعد المحاولة.");}
@@ -1501,9 +1524,12 @@
         if (error) throw error;
         const rows = (data?.results || []).map(r => {
           const exam=(data.exams || []).find(e => e.id === r.exam_id);
+          const reported= r.has_html_submission ? readHtmlReportedScore(r.html_score_record) : null;
+          const score=r.has_html_submission
+            ? (reported ? `${reported.score} / ${reported.maxScore} — درجة معلنة بانتظار الاعتماد` : (r.status==="expired"?"تم استلامه بعد انتهاء الوقت — يحتاج مراجعة":"تم التسليم — يحتاج مراجعة"))
+            : (r.score==null?(r.status||"—"):`${r.score} / ${r.max_score}`);
           return {id:r.id,studentName:r.student_name,className:r.class_name,examTitle:exam?.title||"اختبار",
-            score:r.has_html_submission?(r.status==="expired"?"تم استلامه بعد انتهاء الوقت — يحتاج مراجعة":"تم التسليم — يحتاج مراجعة"):(r.score==null?(r.status||"—"):`${r.score} / ${r.max_score}`),
-            hasHtmlSubmission:!!r.has_html_submission,timestamp:r.submitted_at||r.started_at||""};
+            score,hasHtmlSubmission:!!r.has_html_submission,timestamp:r.submitted_at||r.started_at||""};
         });
         window.cachedResults = rows;
         if (!rows.length) {
