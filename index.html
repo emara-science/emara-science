@@ -1517,9 +1517,9 @@
         if(error)throw error;
         const list=(data?.events||[]).map(e=>{
           const d=e.details||{};
-          return {studentName:d.student_name||"زائر غير مسجل",className:d.class_name||"-",action:e.event_type||"نشاط",details:d.resource_title||d.exam_title||d.details||"",timestamp:e.created_at||""};
+          return {studentName:d.student_name||"زائر غير مسجل",className:d.class_name||"-",action:d.action||e.event_type||"نشاط",details:d.resource_title||d.details||d.exam_title||"",timestamp:e.created_at||""};
         });
-        const downloadsCount=list.filter(a=>String(a.action).includes("resource_open")).length;
+        const downloadsCount=list.filter(a=>String(a.action).includes("تحميل")).length;
         const uniqueNames=new Set(list.map(a=>a.studentName).filter(n=>n!=="زائر غير مسجل"));
         document.getElementById("stat-total-visits").innerText=list.length;
         document.getElementById("stat-total-downloads").innerText=downloadsCount;
