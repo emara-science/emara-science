@@ -811,7 +811,7 @@
             </p>
             <div class="form-group">
               <label>كلمة المرور الجديدة:</label>
-              <input type="text" id="new-teacher-pass" placeholder="أدخل كلمة المرور الجديدة (4 أحرف/أرقام فأكثر)..." />
+              <input type="text" id="new-teacher-pass" placeholder="12 حرفًا على الأقل، ويفضل مزيجًا من أنواع مختلفة..." />
             </div>
             <button class="btn btn-yellow" onclick="updateTeacherPassword()">💾 حفظ كلمة المرور الجديدة</button>
           </div>
@@ -1169,40 +1169,13 @@
     }
 
     async function updateTeacherPassword() {
-      const newPass = document.getElementById("new-teacher-pass").value.trim();
-      if (newPass.length < 4) {
-        alert("⚠️ يرجى إدخال كلمة مرور لا تقل عن 4 أحرف أو أرقام.");
-        return;
-      }
-
-      currentTeacherPassword = newPass;
-      localStorage.setItem("emara_teacher_pass", newPass);
-
-      if (window.db) {
-        try {
-          const snap = await window.firestoreFuncs.getDocs(
-            window.firestoreFuncs.collection(window.db, "admin_settings")
-          );
-          for (const d of snap.docs) {
-            await window.firestoreFuncs.deleteDoc(
-              window.firestoreFuncs.doc(window.db, "admin_settings", d.id)
-            );
-          }
-          await window.firestoreFuncs.addDoc(
-            window.firestoreFuncs.collection(window.db, "admin_settings"),
-            { password: newPass, updatedAt: new Date().toLocaleString("ar-EG") }
-          );
-          alert("✅ تم تغيير كلمة المرور وحفظها على السحاب (Firebase) بنجاح!");
-        } catch (err) {
-          console.error(err);
-          alert("تم الحفظ محلياً فقط، تأكد من اتصال Firebase.");
-        }
-      } else {
-        alert("✅ تم تغيير كلمة المرور على هذا الجهاز (اربط Firebase لتعميمها على كل الأجهزة).");
-      }
-      document.getElementById("new-teacher-pass").value = "";
+      const newPass=document.getElementById("new-teacher-pass").value;
+      if(newPass.length<12){alert("استخدم كلمة مرور قوية لا تقل عن 12 حرفًا.");return;}
+      const {data,error}=await window.supabaseClient.auth.updateUser({password:newPass});
+      if(error||!data?.user){alert(error?.message||"تعذر تحديث كلمة المرور.");return;}
+      document.getElementById("new-teacher-pass").value="";
+      alert("تم تحديث كلمة مرور حساب المعلم في Supabase Auth بنجاح.");
     }
-
     function renderManageContentLists() {
       const examsContainer = document.getElementById("manage-exams-list");
       const resContainer = document.getElementById("manage-resources-list");
