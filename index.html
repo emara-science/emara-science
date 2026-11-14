@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
@@ -999,3 +998,359 @@
       } else if (type === 'external') {
         const link = document.getElementById("new-exam-link").value.trim();
         if (!link) {
+          alert("يرجى إضافة رابط الاختبار الخارجي.");
+          return;
+        }
+        newExamData.link = link;
+      }
+
+      try {
+        await window.firestoreFuncs.addDoc(
+          window.firestoreFuncs.collection(window.db, "exams"),
+          newExamData
+        );
+        alert("🎉 تم نشر الاختبار الجديد بنجاح على هواتف الطلاب!");
+        
+        document.getElementById("new-exam-title").value = "";
+        document.getElementById("new-exam-link").value = "";
+        document.getElementById("new-exam-embed").value = "";
+        document.getElementById("new-questions-container").innerHTML = "";
+        document.getElementById("new-exam-file-input").value = "";
+        document.getElementById("file-upload-status").classList.add("hidden");
+        uploadedFileContent = "";
+        activeQuestionsCount = 0;
+        await refreshDataFromCloud();
+        switchTab('exams-tab', document.querySelector("nav button"));
+      } catch (err) {
+        console.error("خطأ في حفظ الاختبار:", err);
+        alert("فشل نشر الاختبار. يرجى التحقق من الاتصال.");
+      }
+    }
+
+    async function saveResourceToCloud() {
+      if (!window.db) {
+        alert("يرجى ربط قاعدة البيانات السحابية أولاً لتفعيل نشر المذكرات.");
+        return;
+      }
+
+      const title = document.getElementById("res-title").value.trim();
+      const grade = document.getElementById("res-grade").value;
+      const desc = document.getElementById("res-desc").value.trim();
+      const link = document.getElementById("res-link").value.trim();
+
+      if (!title || !link) {
+        alert("يرجى ملء عنوان المذكرة ورابط التحميل.");
+        return;
+      }
+
+      const newResource = { title, grade, desc, link, id: "res_" + Date.now() };
+
+      try {
+        await window.firestoreFuncs.addDoc(
+          window.firestoreFuncs.collection(window.db, "resources"),
+          newResource
+        );
+        alert("🎉 تم نشر وتثبيت المذكرة/التقييم بنجاح في مكتبة الطلاب!");
+        
+        document.getElementById("res-title").value = "";
+        document.getElementById("res-desc").value = "";
+        document.getElementById("res-link").value = "";
+        
+        await refreshDataFromCloud();
+        switchTab('resources-tab', document.querySelectorAll("nav button")[1]);
+      } catch (err) {
+        console.error("خطأ في النشر:", err);
+        alert("حدث خطأ أثناء النشر.");
+      }
+    }
+
+    function openExamIntro(examId) {
+      if (localStorage.getItem("completed_" + examId)) {
+        alert("⚠️ لقد قمت بأداء هذا الاختبار مسبقاً من هذا الجهاز. غير مسموح بإعادة المحاولة.");
+        return;
+      }
+
+      currentExam = loadedExams.find(e => e.id === examId);
+      document.getElementById("intro-exam-title").innerText = currentExam.title;
+      document.getElementById("intro-exam-desc").innerText = currentExam.description || '';
+      document.getElementById("exams-list").classList.add("hidden");
+      document.getElementById("exam-intro").classList.remove("hidden");
+    }
+
+    function cancelExamIntro() {
+      document.getElementById("exam-intro").classList.add("hidden");
+      document.getElementById("exams-list").classList.remove("hidden");
+    }
+
+    function startSelectedExam() {
+      const nameInput = document.getElementById("student-name").value.trim();
+      const nameParts = nameInput.split(/\s+/).filter(Boolean);
+
+      if (nameParts.length < 4) {
+        document.getElementById("name-error").classList.remove("hidden");
+        return;
+      }
+
+      document.getElementById("name-error").classList.add("hidden");
+      studentInfo.name = nameParts.join(" ");
+      studentInfo.className = document.getElementById("student-class").value;
+
+      document.getElementById("exam-intro").classList.add("hidden");
+
+      if (!currentExam.type || currentExam.type === "interactive") {
+        runInteractiveExam();
+      } else {
+        runExternalExam();
+      }
+    }
+
+    function runInteractiveExam() {
+      document.getElementById("exam-runner").classList.remove("hidden");
+      document.getElementById("active-student-display").innerText = "الطالب: " + studentInfo.name;
+      document.getElementById("q-count-display").innerText = currentExam.questions.length;
+
+      const qContainer = document.getElementById("questions-container");
+      qContainer.innerHTML = currentExam.questions.map((item, idx) => `
+        <div class="question-item">
+          <div class="question-text">${item.q}</div>
+          ${item.options.map((opt, optIdx) => `
+            <label class="option-label">
+              <input type="radio" name="q_${idx}" value="${optIdx}">
+              <span>${opt}</span>
+            </label>
+          `).join("")}
+        </div>
+      `).join("");
+
+      secondsRemaining = currentExam.durationMinutes * 60;
+      updateTimerUI();
+      timerInterval = setInterval(() => {
+        secondsRemaining--;
+        updateTimerUI();
+        if (secondsRemaining <= 0) {
+          clearInterval(timerInterval);
+          submitExam(true);
+        }
+      }, 1000);
+    }
+
+    function runExternalExam() {
+      document.getElementById("external-exam-runner").classList.remove("hidden");
+      document.getElementById("ext-active-student").innerText = "الطالب: " + studentInfo.name;
+      
+      const container = document.getElementById("frame-container");
+      
+      if (currentExam.type === "external") {
+        container.innerHTML = `<iframe src="${currentExam.link}" class="embedded-frame"></iframe>`;
+      } else if (currentExam.type === "embed" || currentExam.type === "file") {
+        // تشغيل كود الاختبار المرفوع أو المنسوخ بالكامل مباشرة داخل إطار مخصص
+        const iframe = document.createElement("iframe");
+        iframe.className = "embedded-frame";
+        container.innerHTML = "";
+        container.appendChild(iframe);
+        iframe.contentWindow.document.open();
+        iframe.contentWindow.document.write(currentExam.embed);
+        iframe.contentWindow.document.close();
+      }
+    }
+
+    async function finishExternalExam() {
+      if (!confirm("هل أنت متأكد من إنهاء أداء الاختبار وتسجيل حضورك؟")) return;
+
+      const record = {
+        studentName: studentInfo.name,
+        className: studentInfo.className,
+        examTitle: currentExam.title,
+        score: `تم تسليم الاختبار المدمج`,
+        timestamp: new Date().toLocaleString("ar-EG")
+      };
+
+      localStorage.setItem("completed_" + currentExam.id, "true");
+
+      const localRecords = JSON.parse(localStorage.getItem("emara_exam_results") || "[]");
+      localRecords.push(record);
+      localStorage.setItem("emara_exam_results", JSON.stringify(localRecords));
+
+      document.getElementById("external-exam-runner").classList.add("hidden");
+      document.getElementById("exam-result").classList.remove("hidden");
+      document.getElementById("result-title-main").innerText = "شكراً لك!";
+      document.getElementById("result-student-name").innerText = `${record.studentName} (${record.className})`;
+      document.getElementById("score-circle-container").classList.add("hidden");
+      document.getElementById("review-container").innerHTML = `
+        <div style="background:#1f1f23; padding:1.2rem; border-radius:8px; text-align:center;">
+          <p style="color:var(--accent-yellow); font-weight:700;">تم تسجيل حضورك وتسليم إجاباتك للاختبار بنجاح.</p>
+        </div>
+      `;
+      const statusEl = document.getElementById("submission-status");
+      statusEl.innerText = "⏳ جاري إرسال حضورك إلى سجل مستر محمد عمارة...";
+
+      if (window.db) {
+        try {
+          await window.firestoreFuncs.addDoc(
+            window.firestoreFuncs.collection(window.db, "exam_results"),
+            record
+          );
+          statusEl.innerText = "✅ تم تسجيل حضورك وإجاباتك بنجاح في قاعدة بيانات المنصة!";
+        } catch (err) {
+          console.error(err);
+          statusEl.innerText = "✅ تم تسجيل الحضور محلياً بنجاح.";
+        }
+      } else {
+        statusEl.innerText = "✅ تم اعتماد الحضور وحفظه بنجاح.";
+      }
+    }
+
+    function updateTimerUI() {
+      const mins = Math.floor(secondsRemaining / 60);
+      const secs = secondsRemaining % 60;
+      document.getElementById("timer-display").innerText =
+        `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    async function submitExam(isAuto) {
+      if (!isAuto && !confirm("هل أنت متأكد من إنهاء الاختبار وتسليم إجاباتك؟")) return;
+
+      clearInterval(timerInterval);
+
+      let score = 0;
+      let reviewHTML = "<h3 style='color: var(--accent-yellow); margin-bottom:0.8rem;'>مراجعة الإجابات:</h3>";
+
+      currentExam.questions.forEach((item, idx) => {
+        const selected = document.querySelector(`input[name="q_${idx}"]:checked`);
+        const userAns = selected ? parseInt(selected.value) : -1;
+        const isCorrect = userAns === item.answer;
+        if (isCorrect) score++;
+
+        reviewHTML += `
+          <div style="background:#1f1f23; padding:0.8rem; border-radius:8px; margin-bottom:0.6rem; border-right:4px solid ${isCorrect ? '#16a34a' : '#dc2626'};">
+            <div style="font-weight:700;">${item.q}</div>
+            <div style="font-size:0.9rem; color:${isCorrect ? '#4ade80' : '#f87171'};">
+              إجابتك: ${userAns >= 0 ? item.options[userAns] : "لم يتم الاختيار"}
+            </div>
+            ${!isCorrect ? `<div style="font-size:0.9rem; color:#facc15;">الإجابة الصحيحة: ${item.options[item.answer]}</div>` : ""}
+          </div>
+        `;
+      });
+
+      const total = currentExam.questions.length;
+      const record = {
+        studentName: studentInfo.name,
+        className: studentInfo.className,
+        examTitle: currentExam.title,
+        score: `${score} / ${total}`,
+        numericScore: score,
+        totalQuestions: total,
+        timestamp: new Date().toLocaleString("ar-EG")
+      };
+
+      localStorage.setItem("completed_" + currentExam.id, "true");
+
+      const localRecords = JSON.parse(localStorage.getItem("emara_exam_results") || "[]");
+      localRecords.push(record);
+      localStorage.setItem("emara_exam_results", JSON.stringify(localRecords));
+
+      document.getElementById("exam-runner").classList.add("hidden");
+      document.getElementById("exam-result").classList.remove("hidden");
+      document.getElementById("result-title-main").innerText = "تم تسليم الاختبار بنجاح!";
+      document.getElementById("score-circle-container").classList.remove("hidden");
+      document.getElementById("result-student-name").innerText = `${record.studentName} (${record.className})`;
+      document.getElementById("score-value").innerText = record.score;
+      document.getElementById("review-container").innerHTML = reviewHTML;
+      const statusEl = document.getElementById("submission-status");
+      statusEl.innerText = "⏳ جاري إرسال الدرجة إلى سجل مستر محمد عمارة...";
+
+      if (window.db) {
+        try {
+          await window.firestoreFuncs.addDoc(
+            window.firestoreFuncs.collection(window.db, "exam_results"),
+            record
+          );
+          statusEl.innerText = "✅ تم تسجيل درجتك بنجاح في قاعدة بيانات المنصة!";
+        } catch (err) {
+          console.error(err);
+          statusEl.innerText = "✅ تم حفظ نتيجتك محلياً بنجاح.";
+        }
+      } else {
+        statusEl.innerText = "✅ تم اعتماد الدرجة وحفظها بنجاح.";
+      }
+    }
+
+    function resetToExamList() {
+      document.getElementById("exam-result").classList.add("hidden");
+      document.getElementById("exams-list").classList.remove("hidden");
+    }
+
+    async function loginTeacher() {
+      const pass = document.getElementById("teacher-pass").value;
+      if (pass !== TEACHER_PASSWORD) {
+        document.getElementById("teacher-pass-err").classList.remove("hidden");
+        return;
+      }
+      document.getElementById("teacher-pass-err").classList.add("hidden");
+      document.getElementById("teacher-login-box").classList.add("hidden");
+      document.getElementById("teacher-dashboard").classList.remove("hidden");
+
+      await loadTeacherResults();
+    }
+
+    async function loadTeacherResults() {
+      const tbody = document.getElementById("results-table-body");
+      tbody.innerHTML = "<tr><td colspan='5'>جاري تحميل الدرجات...</td></tr>";
+
+      let allResults = JSON.parse(localStorage.getItem("emara_exam_results") || "[]");
+
+      if (window.db) {
+        try {
+          const snap = await window.firestoreFuncs.getDocs(
+            window.firestoreFuncs.collection(window.db, "exam_results")
+          );
+          allResults = [];
+          snap.forEach(doc => allResults.push(doc.data()));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      window.cachedResults = allResults;
+
+      if (allResults.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='5'>لا توجد نتائج مسجلة حتى الآن.</td></tr>";
+        return;
+      }
+
+      tbody.innerHTML = allResults.map(r => `
+        <tr>
+          <td>${r.studentName}</td>
+          <td>${r.className}</td>
+          <td>${r.examTitle}</td>
+          <td style="color: var(--accent-yellow); font-weight:700;">${r.score}</td>
+          <td>${r.timestamp}</td>
+        </tr>
+      `).join("");
+    }
+
+    function exportResultsCSV() {
+      const data = window.cachedResults || [];
+      if (data.length === 0) {
+        alert("لا توجد درجات لتصديرها.");
+        return;
+      }
+      let csv = "\uFEFFاسم الطالب,الصف,الاختبار,الدرجة,التوقيت\n";
+      data.forEach(r => {
+        csv += `"${r.studentName}","${r.className}","${r.examTitle}","${r.score}","${r.timestamp}"\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "درجات_منصة_مستر_محمد_عمارة.csv";
+      a.click();
+    }
+
+    function unlockLocalAttempt() {
+      loadedExams.forEach(e => localStorage.removeItem("completed_" + e.id));
+      alert("تم إعادة فتح المحاولات على هذا الجهاز بنجاح.");
+    }
+  </script>
+</body>
+</html>
