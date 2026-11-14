@@ -1355,36 +1355,21 @@
       document.getElementById("exams-list").classList.remove("hidden");
     }
 
-    function startSelectedExam() {
-      const nameInput = document.getElementById("student-name").value.trim();
-      const nameParts = nameInput.split(/\s+/).filter(Boolean);
-
-      if (nameParts.length < 4) {
-        document.getElementById("name-error").classList.remove("hidden");
-        return;
-      }
-
+    async function startSelectedExam() {
+      const nameInput=document.getElementById("student-name").value.trim(),parts=nameInput.split(/\s+/).filter(Boolean);
+      if(parts.length<4){document.getElementById("name-error").classList.remove("hidden");return;}
       document.getElementById("name-error").classList.add("hidden");
-      studentInfo.name = nameParts.join(" ");
-      studentInfo.className = document.getElementById("student-class").value;
-
-      localStorage.setItem("emara_student_name", studentInfo.name);
-      localStorage.setItem("emara_student_class", studentInfo.className);
-
-      document.getElementById("personalized-welcome-bar").innerText = `👋 أهلاً بك يا ${studentInfo.name} (${studentInfo.className})`;
-      document.getElementById("personalized-welcome-bar").classList.remove("hidden");
-
-      document.getElementById("exam-intro").classList.add("hidden");
-
-      trackStudentActivity("دخول اختبار إلكتروني", `بدأ اختبار: ${currentExam.title}`);
-
-      if (!currentExam.type || currentExam.type === "interactive") {
-        runInteractiveExam();
-      } else {
-        runExternalExam();
-      }
+      studentInfo.name=parts.join(" ");studentInfo.className=document.getElementById("student-class").value;
+      localStorage.setItem("emara_student_name",studentInfo.name);localStorage.setItem("emara_student_class",studentInfo.className);
+      document.getElementById("personalized-welcome-bar").innerText="👋 أهلاً بك يا "+studentInfo.name+" ("+studentInfo.className+")";
+      document.getElementById("personalized-welcome-bar").classList.remove("hidden");document.getElementById("exam-intro").classList.add("hidden");
+      const deviceId=localStorage.getItem("emara_device_id")||crypto.randomUUID();localStorage.setItem("emara_device_id",deviceId);
+      const {data,error}=await window.supabaseClient.functions.invoke("exam-api",{body:{action:"start",exam_id:currentExam.id,device_id:deviceId,student_name:studentInfo.name,class_name:studentInfo.className}});
+      if(error||!data?.session){alert(data?.error||error?.message||"تعذر بدء الاختبار.");document.getElementById("exam-intro").classList.remove("hidden");return;}
+      window.currentExamSessionId=data.session.id;window.currentExamDeviceId=deviceId;
+      trackStudentActivity("دخول اختبار إلكتروني","بدأ اختبار: "+currentExam.title);
+      if(currentExam.type==="interactive")runInteractiveExam();else runExternalExam();
     }
-
     function runInteractiveExam() {
       document.getElementById("exam-runner").classList.remove("hidden");
       document.getElementById("active-student-display").innerText = "الطالب: " + studentInfo.name;
@@ -1423,53 +1408,19 @@
       else{const frame=document.createElement("iframe");frame.className="embedded-frame";frame.setAttribute("sandbox","allow-forms allow-scripts");frame.srcdoc=currentExam.html_content||"";container.appendChild(frame);}
     }
     async function finishExternalExam() {
-      if (!confirm("هل أنت متأكد من إنهاء أداء الاختبار وتسجيل حضورك؟")) return;
-
-      const record = {
-        studentName: studentInfo.name,
-        className: studentInfo.className,
-        examTitle: currentExam.title,
-        score: `تم التسليم (اختبار مدمج)`,
-        timestamp: new Date().toLocaleString("ar-EG")
-      };
-
-      localStorage.setItem("completed_" + currentExam.id, "true");
-
-      const localRecords = JSON.parse(localStorage.getItem("emara_exam_results") || "[]");
-      localRecords.push(record);
-      localStorage.setItem("emara_exam_results", JSON.stringify(localRecords));
-
-      trackStudentActivity("تسليم اختبار مدمج", `أنهى اختبار: ${currentExam.title}`);
-
-      document.getElementById("external-exam-runner").classList.add("hidden");
-      document.getElementById("exam-result").classList.remove("hidden");
-      document.getElementById("result-title-main").innerText = "شكراً لك!";
-      document.getElementById("result-student-name").innerText = `${record.studentName} (${record.className})`;
+      if(!confirm("هل أنت متأكد من إنهاء الاختبار وتسجيل التسليم؟"))return;
+      const {data,error}=await window.supabaseClient.functions.invoke("exam-api",{body:{action:"submit",exam_id:currentExam.id,session_id:window.currentExamSessionId,device_id:window.currentExamDeviceId,answers:{}}});
+      if(error||!data?.ok){alert(data?.error||error?.message||"تعذر تسجيل التسليم.");return;}
+      localStorage.setItem("completed_"+currentExam.id,"true");
+      document.getElementById("external-exam-runner").classList.add("hidden");document.getElementById("exam-result").classList.remove("hidden");
+      document.getElementById("result-title-main").innerText="شكراً لك!";
+      document.getElementById("result-student-name").innerText=studentInfo.name+" ("+studentInfo.className+")";
       document.getElementById("score-circle-container").classList.add("hidden");
-      document.getElementById("review-container").innerHTML = `
-        <div style="background:#1f1f23; padding:1.2rem; border-radius:8px; text-align:center;">
-          <p style="color:var(--accent-yellow); font-weight:700;">تم تسجيل حضورك وتسليم إجاباتك للاختبار بنجاح.</p>
-        </div>
-      `;
-      const statusEl = document.getElementById("submission-status");
-      statusEl.innerText = "⏳ جاري إرسال حضورك إلى سجل مستر محمد عمارة...";
-
-      if (window.db) {
-        try {
-          await window.firestoreFuncs.addDoc(
-            window.firestoreFuncs.collection(window.db, "exam_results"),
-            record
-          );
-          statusEl.innerText = "✅ تم تسجيل حضورك بنجاح في قاعدة بيانات المنصة!";
-        } catch (err) {
-          console.error(err);
-          statusEl.innerText = "✅ تم تسجيل الحضور محلياً بنجاح.";
-        }
-      } else {
-        statusEl.innerText = "✅ تم اعتماد الحضور وحفظه بنجاح.";
-      }
+      document.getElementById("review-container").innerHTML="<p>تم تسجيل تسليم الاختبار في Supabase.</p>";
+      document.getElementById("submission-status").innerText="تم تسجيل التسليم بنجاح.";
+      trackStudentActivity("تسليم اختبار مدمج","أنهى اختبار: "+currentExam.title);
+      await refreshDataFromCloud();
     }
-
     function updateTimerUI() {
       const mins = Math.floor(secondsRemaining / 60);
       const secs = secondsRemaining % 60;
@@ -1478,75 +1429,23 @@
     }
 
     async function submitExam(isAuto) {
-      if (!isAuto && !confirm("هل أنت متأكد من إنهاء الاختبار وتسليم إجاباتك؟")) return;
-
+      if(!isAuto&&!confirm("هل أنت متأكد من إنهاء الاختبار وتسليم إجاباتك؟"))return;
       clearInterval(timerInterval);
-
-      let score = 0;
-      let reviewHTML = "<h3 style='color: var(--accent-yellow); margin-bottom:0.8rem;'>مراجعة الإجابات:</h3>";
-
-      currentExam.questions.forEach((item, idx) => {
-        const selected = document.querySelector(`input[name="q_${idx}"]:checked`);
-        const userAns = selected ? parseInt(selected.value) : -1;
-        const isCorrect = userAns === item.answer;
-        if (isCorrect) score++;
-
-        reviewHTML += `
-          <div style="background:#1f1f23; padding:0.8rem; border-radius:8px; margin-bottom:0.6rem; border-right:4px solid ${isCorrect ? '#16a34a' : '#dc2626'};">
-            <div style="font-weight:700;">${item.q}</div>
-            <div style="font-size:0.9rem; color:${isCorrect ? '#4ade80' : '#f87171'};">
-              إجابتك: ${userAns >= 0 ? item.options[userAns] : "لم يتم الاختيار"}
-            </div>
-            ${!isCorrect ? `<div style="font-size:0.9rem; color:#facc15;">الإجابة الصحيحة: ${item.options[item.answer]}</div>` : ""}
-          </div>
-        `;
-      });
-
-      const total = currentExam.questions.length;
-      const record = {
-        studentName: studentInfo.name,
-        className: studentInfo.className,
-        examTitle: currentExam.title,
-        score: `${score} / ${total}`,
-        numericScore: score,
-        totalQuestions: total,
-        timestamp: new Date().toLocaleString("ar-EG")
-      };
-
-      localStorage.setItem("completed_" + currentExam.id, "true");
-
-      const localRecords = JSON.parse(localStorage.getItem("emara_exam_results") || "[]");
-      localRecords.push(record);
-      localStorage.setItem("emara_exam_results", JSON.stringify(localRecords));
-
-      trackStudentActivity("تسليم اختبار تفاعلي", `حصل على ${record.score} في: ${currentExam.title}`);
-
-      document.getElementById("exam-runner").classList.add("hidden");
-      document.getElementById("exam-result").classList.remove("hidden");
-      document.getElementById("result-title-main").innerText = "تم تسليم الاختبار بنجاح!";
+      const answers={};
+      (currentExam.questions||[]).forEach((q,idx)=>{const selected=document.querySelector('input[name="q_'+idx+'"]:checked');answers[q.id]=selected?parseInt(selected.value):-1;});
+      const {data,error}=await window.supabaseClient.functions.invoke("exam-api",{body:{action:"submit",exam_id:currentExam.id,session_id:window.currentExamSessionId,device_id:window.currentExamDeviceId,answers}});
+      if(error||!data?.ok){alert(data?.error||error?.message||"تعذر تسليم الاختبار. حاول مرة أخرى.");return;}
+      localStorage.setItem("completed_"+currentExam.id,"true");
+      document.getElementById("exam-runner").classList.add("hidden");document.getElementById("exam-result").classList.remove("hidden");
+      document.getElementById("result-title-main").innerText="تم تسليم الاختبار بنجاح!";
       document.getElementById("score-circle-container").classList.remove("hidden");
-      document.getElementById("result-student-name").innerText = `${record.studentName} (${record.className})`;
-      document.getElementById("score-value").innerText = record.score;
-      document.getElementById("review-container").innerHTML = reviewHTML;
-      const statusEl = document.getElementById("submission-status");
-      statusEl.innerText = "⏳ جاري إرسال الدرجة إلى سجل مستر محمد عمارة...";
-
-      if (window.db) {
-        try {
-          await window.firestoreFuncs.addDoc(
-            window.firestoreFuncs.collection(window.db, "exam_results"),
-            record
-          );
-          statusEl.innerText = "✅ تم تسجيل درجتك بنجاح في قاعدة بيانات المنصة!";
-        } catch (err) {
-          console.error(err);
-          statusEl.innerText = "✅ تم حفظ نتيجتك محلياً بنجاح.";
-        }
-      } else {
-        statusEl.innerText = "✅ تم اعتماد الدرجة وحفظها بنجاح.";
-      }
+      document.getElementById("result-student-name").innerText=studentInfo.name+" ("+studentInfo.className+")";
+      document.getElementById("score-value").innerText=data.score+" / "+data.max_score;
+      document.getElementById("submission-status").innerText="تم حفظ إجاباتك ودرجتك في Supabase.";
+      document.getElementById("review-container").innerHTML="<h3 style='color:var(--accent-yellow)'>مراجعة الإجابات:</h3>"+(data.review||[]).map(q=>'<div class="question-item"><strong>'+q.prompt+'</strong><p>إجابتك: '+(q.selected>=0?(q.options||[])[q.selected]:"لم تختر إجابة")+'</p><p style="color:'+(q.is_correct?'#4ade80':'#f87171')+'">'+(q.is_correct?"إجابة صحيحة":"إجابة غير صحيحة")+'</p></div>').join("");
+      trackStudentActivity("تسليم اختبار تفاعلي","الدرجة "+data.score+" / "+data.max_score+" في "+currentExam.title);
+      await refreshDataFromCloud();
     }
-
     function resetToExamList() {
       document.getElementById("exam-result").classList.add("hidden");
       document.getElementById("exams-list").classList.remove("hidden");
