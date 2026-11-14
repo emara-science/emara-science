@@ -601,9 +601,13 @@
       <!-- شاشة تسجيل دخول المعلم -->
       <div id="teacher-login-box" class="exam-box" style="max-width: 450px; margin: 0 auto;">
         <div class="form-group">
-          <label>كلمة مرور المعلم:</label>
-          <input type="password" id="teacher-pass" placeholder="أدخل كلمة المرور..." />
-          <div id="teacher-pass-err" class="error-msg hidden">كلمة المرور غير صحيحة!</div>
+          <label>اسم المستخدم:</label>
+          <input type="text" id="teacher-username" placeholder="أدخل اسم المستخدم..." autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور:</label>
+          <input type="password" id="teacher-pass" placeholder="أدخل كلمة المرور..." autocomplete="current-password" />
+          <div id="teacher-pass-err" class="error-msg hidden">اسم المستخدم أو كلمة المرور غير صحيحة، أو الحساب غير مخوّل.</div>
         </div>
         <button class="btn btn-yellow" onclick="loginTeacher()">دخول</button>
       </div>
@@ -803,7 +807,7 @@
           <div class="exam-box" style="max-width: 450px; margin: 0 auto;">
             <h3 style="color: var(--accent-yellow); margin-bottom: 1rem;">تغيير كلمة مرور لوحة التحكم</h3>
             <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
-              يتم حفظ كلمة المرور الجديدة في قاعدة بيانات Firebase وتُعمّم تلقائياً على جميع أجهزتك.
+              تتم إدارة كلمة مرور الحساب من خلال نظام المصادقة Supabase Auth.
             </p>
             <div class="form-group">
               <label>كلمة المرور الجديدة:</label>
@@ -849,45 +853,22 @@
     جميع الحقوق محفوظة &copy; 2026 - منصة مستر محمد عمارة للعلوم والكيمياء
   </footer>
 
-  <!-- ========================================================================= -->
-  <!-- إعدادات ربط Firebase - ضع بيانات مشروعك من لوحة Firebase في السطور التالية -->
-  <!-- ========================================================================= -->
+  <!-- Supabase connection (X2) -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "ضع_API_KEY_الخاص_بك_هنا",
-      authDomain: "ضع_AUTH_DOMAIN_هنا",
-      projectId: "ضع_PROJECT_ID_الخاص_بك_هنا",
-      storageBucket: "ضع_STORAGE_BUCKET_هنا",
-      messagingSenderId: "ضع_MESSAGING_SENDER_ID_هنا",
-      appId: "ضع_APP_ID_هنا"
-    };
-
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+    const SUPABASE_URL = "https://hftmfcfaikjkepawppvv.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_kmhzdsmzZjVAG4pAgwj7gg_GovehO0i";
+    window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
     window.db = null;
-    window.firestoreFuncs = { collection, addDoc, getDocs, deleteDoc, doc };
-
-    const isConfigured = firebaseConfig.apiKey && 
-                         !firebaseConfig.apiKey.includes("ضع_") && 
-                         firebaseConfig.projectId && 
-                         !firebaseConfig.projectId.includes("ضع_");
-
-    if (isConfigured) {
-      try {
-        const app = initializeApp(firebaseConfig);
-        window.db = getFirestore(app);
-        document.getElementById("cloud-status-badge").innerText = "🟢 متصل بالسحاب (Firebase)";
-        document.getElementById("cloud-status-badge").style.background = "#16a34a";
-        window.initAppAfterFirebase();
-      } catch (e) {
-        console.error("Firebase Init Error:", e);
-        window.initAppOffline();
-      }
-    } else {
-      document.getElementById("cloud-status-badge").innerText = "🟡 وضع محلي (بانتظار ربط Firebase)";
-      window.initAppOffline();
+    window.firestoreFuncs = null;
+    const badge = document.getElementById("cloud-status-badge");
+    if (badge) {
+      badge.innerText = "🟢 متصل بـ Supabase";
+      badge.style.background = "#16a34a";
     }
+    if (typeof window.initAppOffline === "function") window.initAppOffline();
   </script>
 
   <script>
@@ -1740,54 +1721,78 @@
       document.getElementById("exams-list").classList.remove("hidden");
     }
 
+    let currentTeacherSession = null;
+    const TEACHER_LOGIN_EMAILS = { "2026": "mahmoudabdelfattah049@gmail.com" };
+
     async function loginTeacher() {
-      await syncTeacherPasswordFromCloud();
-      const pass = document.getElementById("teacher-pass").value;
-      if (pass !== currentTeacherPassword) {
-        document.getElementById("teacher-pass-err").classList.remove("hidden");
+      const username = document.getElementById("teacher-username").value.trim();
+      const password = document.getElementById("teacher-pass").value;
+      const errorEl = document.getElementById("teacher-pass-err");
+      const client = window.supabaseClient;
+      if (!client) {
+        errorEl.innerText = "تعذر الاتصال بـ Supabase. أعد تحميل الصفحة.";
+        errorEl.classList.remove("hidden");
         return;
       }
-      document.getElementById("teacher-pass-err").classList.add("hidden");
-      document.getElementById("teacher-login-box").classList.add("hidden");
-      document.getElementById("teacher-dashboard").classList.remove("hidden");
-
-      await loadTeacherResults();
+      const email = TEACHER_LOGIN_EMAILS[username];
+      if (!email || !password) {
+        errorEl.innerText = "اسم المستخدم أو كلمة المرور غير صحيحة.";
+        errorEl.classList.remove("hidden");
+        return;
+      }
+      try {
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        if (error || !data.session || !data.user) throw error || new Error("لم يتم إنشاء جلسة دخول.");
+        const { data: profile, error: profileError } = await client
+          .from("profiles").select("id, username, role, is_approved")
+          .eq("id", data.user.id).maybeSingle();
+        if (profileError || !profile || profile.username !== username ||
+            profile.role !== "teacher" || profile.is_approved !== true) {
+          await client.auth.signOut();
+          throw new Error("الحساب غير مخوّل لدخول لوحة المعلم.");
+        }
+        currentTeacherSession = data.session;
+        errorEl.classList.add("hidden");
+        document.getElementById("teacher-login-box").classList.add("hidden");
+        document.getElementById("teacher-dashboard").classList.remove("hidden");
+        await loadTeacherResults();
+      } catch (err) {
+        console.error("Teacher sign-in failed:", err);
+        errorEl.innerText = err?.message === "Invalid login credentials"
+          ? "اسم المستخدم أو كلمة المرور غير صحيحة."
+          : (err?.message || "تعذر تسجيل الدخول. تحقق من إعداد كلمة مرور Supabase Auth.");
+        errorEl.classList.remove("hidden");
+      }
     }
 
     async function loadTeacherResults() {
       const tbody = document.getElementById("results-table-body");
       tbody.innerHTML = "<tr><td colspan='5'>جاري تحميل الدرجات...</td></tr>";
-
-      let allResults = JSON.parse(localStorage.getItem("emara_exam_results") || "[]");
-
-      if (window.db) {
-        try {
-          const snap = await window.firestoreFuncs.getDocs(
-            window.firestoreFuncs.collection(window.db, "exam_results")
-          );
-          allResults = [];
-          snap.forEach(d => allResults.push(d.data()));
-        } catch (e) {
-          console.error(e);
+      try {
+        const { data, error } = await window.supabaseClient.functions.invoke("owner-control", {
+          body: { action: "dashboard" }
+        });
+        if (error) throw error;
+        const rows = (data?.results || []).map(r => ({
+          id: r.id, studentName: r.student_name, className: r.class_name,
+          examTitle: (data.exams || []).find(e => e.id === r.exam_id)?.title || "اختبار",
+          score: r.score == null ? (r.status || "—") : `${r.score} / ${r.max_score}`,
+          timestamp: r.submitted_at || r.started_at || ""
+        }));
+        window.cachedResults = rows;
+        if (!rows.length) {
+          tbody.innerHTML = "<tr><td colspan='5'>لا توجد نتائج مسجلة حتى الآن.</td></tr>";
+          return;
         }
+        tbody.innerHTML = rows.map(r => `
+          <tr><td><strong>${r.studentName || ""}</strong></td><td>${r.className || ""}</td>
+          <td>${r.examTitle}</td><td style="color:var(--accent-yellow);font-weight:700;">${r.score}</td>
+          <td>${r.timestamp ? new Date(r.timestamp).toLocaleString("ar-EG") : "—"}</td></tr>
+        `).join("");
+      } catch (e) {
+        console.error("Supabase dashboard load failed:", e);
+        tbody.innerHTML = "<tr><td colspan='5'>تعذر تحميل النتائج من Supabase. تحقق من الجلسة واتصال الخدمة.</td></tr>";
       }
-
-      window.cachedResults = allResults;
-
-      if (allResults.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='5'>لا توجد نتائج مسجلة حتى الآن.</td></tr>";
-        return;
-      }
-
-      tbody.innerHTML = allResults.map(r => `
-        <tr>
-          <td><strong>${r.studentName}</strong></td>
-          <td>${r.className}</td>
-          <td>${r.examTitle}</td>
-          <td style="color: var(--accent-yellow); font-weight:700;">${r.score}</td>
-          <td>${r.timestamp}</td>
-        </tr>
-      `).join("");
     }
 
     async function loadStudentActivities() {
