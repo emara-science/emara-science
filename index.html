@@ -1373,111 +1373,13 @@
         frame.className="embedded-frame";
         frame.title="اختبار HTML مدمج";
         // Keep the opaque-origin sandbox. Do not add allow-same-origin.
-        // allow-modals is needed by common HTML exams using alert()/confirm().
+        // allow-modals is needed by HTML exams using alert()/confirm().
         frame.setAttribute("sandbox","allow-forms allow-scripts allow-modals");
         let html=String(currentExam.html_content||"");
         if(/<head\\b[^>]*>/i.test(html)){
-          html=html.replace(/<head\\b[^>]*>/i,match=>match+"<script>
-(function () {
-  "use strict";
-  // Opaque-origin srcdoc documents cannot use native localStorage.
-  // Provide a small, isolated Web Storage-compatible shim without granting same-origin access.
-  var prefix = "__EMARA_HTML_EXAM_STORAGE__:";
-  function readStore() {
-    try {
-      var raw = window.name || "";
-      if (raw.indexOf(prefix) !== 0) return {};
-      var parsed = JSON.parse(raw.slice(prefix.length));
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-    } catch (_) { return {}; }
-  }
-  function writeStore(store) {
-    try { window.name = prefix + JSON.stringify(store); } catch (_) {}
-  }
-  var storage = {
-    getItem: function (key) {
-      var store = readStore();
-      key = String(key);
-      return Object.prototype.hasOwnProperty.call(store, key) ? String(store[key]) : null;
-    },
-    setItem: function (key, value) {
-      var store = readStore();
-      store[String(key)] = String(value);
-      writeStore(store);
-    },
-    removeItem: function (key) {
-      var store = readStore();
-      delete store[String(key)];
-      writeStore(store);
-    },
-    clear: function () { writeStore({}); },
-    key: function (index) {
-      var keys = Object.keys(readStore());
-      return Number.isInteger(Number(index)) && Number(index) >= 0 ? (keys[Number(index)] || null) : null;
-    }
-  };
-  Object.defineProperty(storage, "length", {
-    enumerable: true,
-    get: function () { return Object.keys(readStore()).length; }
-  });
-  try {
-    Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
-  } catch (_) {
-    try { window.localStorage = storage; } catch (__) {}
-  }
-})();
-</script>");
+          html=html.replace(/<head\\b[^>]*>/i,match=>match+"<script>\n(function () {\n  \"use strict\";\n  var prefix = \"__EMARA_HTML_EXAM_STORAGE__:\";\n  function readStore() {\n    try {\n      var raw = window.name || \"\";\n      if (raw.indexOf(prefix) !== 0) return {};\n      var parsed = JSON.parse(raw.slice(prefix.length));\n      return parsed && typeof parsed === \"object\" && !Array.isArray(parsed) ? parsed : {};\n    } catch (_) { return {}; }\n  }\n  function writeStore(store) {\n    try { window.name = prefix + JSON.stringify(store); } catch (_) {}\n  }\n  var storage = {\n    getItem: function (key) {\n      var store = readStore(); key = String(key);\n      return Object.prototype.hasOwnProperty.call(store, key) ? String(store[key]) : null;\n    },\n    setItem: function (key, value) {\n      var store = readStore(); store[String(key)] = String(value); writeStore(store);\n    },\n    removeItem: function (key) {\n      var store = readStore(); delete store[String(key)]; writeStore(store);\n    },\n    clear: function () { writeStore({}); },\n    key: function (index) {\n      var keys = Object.keys(readStore());\n      return Number.isInteger(Number(index)) && Number(index) >= 0 ? (keys[Number(index)] || null) : null;\n    }\n  };\n  Object.defineProperty(storage, \"length\", { enumerable: true, get: function () { return Object.keys(readStore()).length; } });\n  try { Object.defineProperty(window, \"localStorage\", { configurable: true, value: storage }); }\n  catch (_) { try { window.localStorage = storage; } catch (__) {} }\n})();\n<\/script>");
         }else{
-          html="<!doctype html><html><head><script>
-(function () {
-  "use strict";
-  // Opaque-origin srcdoc documents cannot use native localStorage.
-  // Provide a small, isolated Web Storage-compatible shim without granting same-origin access.
-  var prefix = "__EMARA_HTML_EXAM_STORAGE__:";
-  function readStore() {
-    try {
-      var raw = window.name || "";
-      if (raw.indexOf(prefix) !== 0) return {};
-      var parsed = JSON.parse(raw.slice(prefix.length));
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-    } catch (_) { return {}; }
-  }
-  function writeStore(store) {
-    try { window.name = prefix + JSON.stringify(store); } catch (_) {}
-  }
-  var storage = {
-    getItem: function (key) {
-      var store = readStore();
-      key = String(key);
-      return Object.prototype.hasOwnProperty.call(store, key) ? String(store[key]) : null;
-    },
-    setItem: function (key, value) {
-      var store = readStore();
-      store[String(key)] = String(value);
-      writeStore(store);
-    },
-    removeItem: function (key) {
-      var store = readStore();
-      delete store[String(key)];
-      writeStore(store);
-    },
-    clear: function () { writeStore({}); },
-    key: function (index) {
-      var keys = Object.keys(readStore());
-      return Number.isInteger(Number(index)) && Number(index) >= 0 ? (keys[Number(index)] || null) : null;
-    }
-  };
-  Object.defineProperty(storage, "length", {
-    enumerable: true,
-    get: function () { return Object.keys(readStore()).length; }
-  });
-  try {
-    Object.defineProperty(window, "localStorage", { configurable: true, value: storage });
-  } catch (_) {
-    try { window.localStorage = storage; } catch (__) {}
-  }
-})();
-</script></head><body>"+html+"</body></html>";
+          html="<!doctype html><html><head>"+"<script>\n(function () {\n  \"use strict\";\n  var prefix = \"__EMARA_HTML_EXAM_STORAGE__:\";\n  function readStore() {\n    try {\n      var raw = window.name || \"\";\n      if (raw.indexOf(prefix) !== 0) return {};\n      var parsed = JSON.parse(raw.slice(prefix.length));\n      return parsed && typeof parsed === \"object\" && !Array.isArray(parsed) ? parsed : {};\n    } catch (_) { return {}; }\n  }\n  function writeStore(store) {\n    try { window.name = prefix + JSON.stringify(store); } catch (_) {}\n  }\n  var storage = {\n    getItem: function (key) {\n      var store = readStore(); key = String(key);\n      return Object.prototype.hasOwnProperty.call(store, key) ? String(store[key]) : null;\n    },\n    setItem: function (key, value) {\n      var store = readStore(); store[String(key)] = String(value); writeStore(store);\n    },\n    removeItem: function (key) {\n      var store = readStore(); delete store[String(key)]; writeStore(store);\n    },\n    clear: function () { writeStore({}); },\n    key: function (index) {\n      var keys = Object.keys(readStore());\n      return Number.isInteger(Number(index)) && Number(index) >= 0 ? (keys[Number(index)] || null) : null;\n    }\n  };\n  Object.defineProperty(storage, \"length\", { enumerable: true, get: function () { return Object.keys(readStore()).length; } });\n  try { Object.defineProperty(window, \"localStorage\", { configurable: true, value: storage }); }\n  catch (_) { try { window.localStorage = storage; } catch (__) {} }\n})();\n<\/script>"+"</head><body>"+html+"</body></html>";
         }
         frame.srcdoc=html;
         container.appendChild(frame);
