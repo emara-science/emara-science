@@ -925,9 +925,10 @@
       checkSavedStudentName();
     };
 
-    window.initAppOffline = function() {
+    window.initAppOffline = async function() {
       renderExams(loadedExams);
       renderResources(loadedResources);
+      await refreshDataFromCloud();
       checkSavedStudentName();
     };
 
@@ -1526,48 +1527,24 @@
     }
 
     async function loadStudentActivities() {
-      const tbody = document.getElementById("activities-table-body");
-      tbody.innerHTML = "<tr><td colspan='5'>جاري تحميل سجل النشاط...</td></tr>";
-
-      let list = JSON.parse(localStorage.getItem("emara_activities") || "[]");
-
-      if (window.db) {
-        try {
-          const snap = await window.firestoreFuncs.getDocs(
-            window.firestoreFuncs.collection(window.db, "student_activities")
-          );
-          list = [];
-          snap.forEach(d => list.push(d.data()));
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      const downloadsCount = list.filter(a => a.action.includes("تحميل")).length;
-      const uniqueNames = new Set(list.map(a => a.studentName).filter(n => n !== "زائر غير مسجل"));
-
-      document.getElementById("stat-total-visits").innerText = list.length;
-      document.getElementById("stat-total-downloads").innerText = downloadsCount;
-      document.getElementById("stat-unique-students").innerText = uniqueNames.size;
-
-      list.reverse();
-
-      if (list.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='5'>لا توجد أنشطة مسجلة للطلاب حتى الآن.</td></tr>";
-        return;
-      }
-
-      tbody.innerHTML = list.map(a => `
-        <tr>
-          <td><strong>${a.studentName}</strong></td>
-          <td>${a.className}</td>
-          <td style="color:var(--accent-yellow); font-weight:700;">${a.action}</td>
-          <td>${a.details}</td>
-          <td>${a.timestamp}</td>
-        </tr>
-      `).join("");
+      const tbody=document.getElementById("activities-table-body");
+      tbody.innerHTML="<tr><td colspan='5'>جاري تحميل سجل النشاط...</td></tr>";
+      try{
+        const {data,error}=await window.supabaseClient.functions.invoke("owner-control",{body:{action:"dashboard"}});
+        if(error)throw error;
+        const list=(data?.events||[]).map(e=>{
+          const d=e.details||{};
+          return {studentName:d.student_name||"زائر غير مسجل",className:d.class_name||"-",action:e.event_type||"نشاط",details:d.resource_title||d.exam_title||d.details||"",timestamp:e.created_at||""};
+        });
+        const downloadsCount=list.filter(a=>String(a.action).includes("resource_open")).length;
+        const uniqueNames=new Set(list.map(a=>a.studentName).filter(n=>n!=="زائر غير مسجل"));
+        document.getElementById("stat-total-visits").innerText=list.length;
+        document.getElementById("stat-total-downloads").innerText=downloadsCount;
+        document.getElementById("stat-unique-students").innerText=uniqueNames.size;
+        if(!list.length){tbody.innerHTML="<tr><td colspan='5'>لا توجد أنشطة مسجلة في السجل السحابي حتى الآن.</td></tr>";return;}
+        tbody.innerHTML=list.map(a=>`<tr><td><strong>${a.studentName}</strong></td><td>${a.className}</td><td style="color:var(--accent-yellow);font-weight:700;">${a.action}</td><td>${typeof a.details==="string"?a.details:JSON.stringify(a.details)}</td><td>${a.timestamp?new Date(a.timestamp).toLocaleString("ar-EG"):"—"}</td></tr>`).join("");
+      }catch(err){console.error(err);tbody.innerHTML="<tr><td colspan='5'>تعذر تحميل سجل النشاط السحابي.</td></tr>";}
     }
-
     function exportResultsCSV() {
       const data = window.cachedResults || [];
       if (data.length === 0) {
